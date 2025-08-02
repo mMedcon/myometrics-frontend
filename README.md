@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MyoMetrics Frontend
+
+A Next.js 15 frontend application for the MyoMetrics medical image analysis platform.
+
+## Features
+
+### Authentication & User Management
+- **AuthPage**: Combined login/registration with JWT authentication
+- **ForgotPasswordPage**: Password reset functionality  
+- **UserAccountPage**: Profile management and account settings
+
+### Core Functionality
+- **DashboardPage**: Main landing page with activity overview and statistics
+- **UploadPage**: Secure file upload interface with drag-and-drop support
+- **UploadDetailsPage**: Detailed view of analysis results and upload metadata
+- **UploadHistoryPage**: Complete audit trail of all uploads with filtering
+
+### Administrative Features
+- **AnalyticsPage**: Comprehensive dashboard for admin users with system insights
+
+## Tech Stack
+
+- **Next.js 15** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Custom CSS variables** for theming (light/dark mode support)
+
+## Architecture
+
+### API Services (`/lib/api/`)
+- `auth.ts`: Authentication service for Django backend
+- `microservice.ts`: Integration with Python microservice for image analysis
+- `django.ts`: Additional Django backend services
+- `index.ts`: Unified API exports and error handling
+
+### Context (`/lib/context/`)
+- `AuthContext.tsx`: Global authentication state management
+
+### Components (`/components/`)
+- `Navigation.tsx`: Main navigation component
+- `ProtectedRoute.tsx`: Route protection wrapper
+
+### Pages (`/app/`)
+All pages follow Next.js 15 App Router structure with proper error handling and loading states.
+
+## Security Features
+
+- **HIPAA Compliance**: Secure data handling and audit trails
+- **JWT Authentication**: Token-based authentication with refresh
+- **Protected Routes**: Role-based access control
+- **Secure File Upload**: File validation and secure transmission
+- **Audit Logging**: Complete activity tracking
+
+## Color Scheme
+
+The application uses a professional medical color palette:
+
+```css
+/* Light Theme */
+--text: #030707;
+--background: #f7fcfd;
+--primary: #2ec1d1;      /* Teal blue */
+--secondary: #FFDE5F;    /* Warm yellow */
+--accent: #53c4a6;       /* Mint green */
+
+/* Dark Theme */
+--text: #f8fffe;
+--background: #020405;
+/* Primary colors remain consistent */
+```
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Set up environment variables:**
+   Copy `.env.local` and configure:
+   ```bash
+   NEXT_PUBLIC_API_URL=http://localhost:8000/api
+   NEXT_PUBLIC_MICROSERVICE_URL=http://localhost:8001
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. **Run development server:**
+   ```bash
+   npm run dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. **Build for production:**
+   ```bash
+   npm run build
+   npm run start
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Backend Integration
 
-## Learn More
+### Django Backend
+- User authentication and management
+- Audit logging and compliance tracking
+- User activity analytics
+- Notification settings
 
-To learn more about Next.js, take a look at the following resources:
+### Python Microservice
+- Medical image upload and processing
+- AI-powered analysis and diagnosis
+- Upload status tracking
+- Statistics and metrics
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## User Roles
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Clinician**: Standard user with upload and analysis access
+- **Admin**: Full platform access including analytics dashboard
 
-## Deploy on Vercel
+## Development Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- All API calls include proper error handling and loading states
+- Components are fully typed with TypeScript
+- Responsive design works on desktop, tablet, and mobile
+- Dark/light theme support with CSS custom properties
+- WCAG accessibility guidelines followed
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## File Upload Guidelines
+
+- **Supported formats**: JPEG, PNG
+- **Maximum file size**: 10MB
+- **Security**: All uploads are validated and processed securely
+- **Progress tracking**: Real-time upload progress with status updates
+
+## Deployment
+
+The application is configured for easy deployment to Vercel, Netlify, or any Node.js hosting platform. Ensure environment variables are properly configured in your deployment environment.
