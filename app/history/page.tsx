@@ -34,17 +34,23 @@ export default function UploadHistoryPage() {
   const fetchUploads = async (page = 1, reset = false) => {
     try {
       setIsLoading(true);
-      const offset = (page - 1) * itemsPerPage;
-      const newUploads = await microserviceAPI.getUserUploads(itemsPerPage, offset);
-      
-      if (reset) {
-        setUploads(newUploads);
-        setCurrentPage(1);
-      } else {
-        setUploads(prev => [...prev, ...newUploads]);
+      const user = localStorage.getItem('user');
+      if (!user) {
+        setError('User not authenticated');
+        return;
       }
       
-      setHasMore(newUploads.length === itemsPerPage);
+      const userData = JSON.parse(user);
+      const response = await microserviceAPI.getUserUploads(userData.id.toString());
+      
+      if (reset) {
+        setUploads(response.uploads);
+        setCurrentPage(1);
+      } else {
+        setUploads(prev => [...prev, ...response.uploads]);
+      }
+      
+      setHasMore(response.uploads.length === itemsPerPage);
     } catch (err: any) {
       console.error('Failed to fetch uploads:', err);
       setError('Failed to load upload history. Please try again.');

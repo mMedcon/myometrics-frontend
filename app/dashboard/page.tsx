@@ -180,25 +180,24 @@ export default function DashboardPage() {
               title="Total Uploads"
               value={stats.total_uploads}
               description="All time"
-
               color="var(--primary)"
             />
             <DashboardCard
-              title="Today's Uploads"
-              value={stats.uploads_today}
-              description="Uploaded today"
+              title="Unique Users"
+              value={stats.unique_users}
+              description="Active users"
               color="var(--secondary)"
             />
             <DashboardCard
-              title="This Week"
-              value={stats.uploads_this_week}
-              description="Uploaded this week"
+              title="Latest Upload"
+              value={new Date(stats.latest_upload).toLocaleDateString()}
+              description="Most recent activity"
               color="var(--accent)"
             />
             <DashboardCard
-              title="Average Confidence"
-              value={`${stats.average_confidence}%`}
-              description="AI analysis confidence"
+              title="First Upload"
+              value={new Date(stats.earliest_upload).toLocaleDateString()}
+              description="Platform started"
               color="var(--success)"
             />
           </div>
@@ -231,67 +230,42 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Common Diagnoses */}
+          {/* Platform Activity Summary */}
           <div className="card">
             <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-              Common Diagnoses
+              Platform Activity
             </h2>
-            <div className="space-y-3">
-              {stats?.common_diagnoses?.length ? (
-                stats.common_diagnoses.slice(0, 5).map((diagnosis, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                        {diagnosis.diagnosis}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {diagnosis.count} cases ({diagnosis.percentage}%)
-                      </p>
-                    </div>
-                    <div className="w-16 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--hover-background)' }}>
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          backgroundColor: 'var(--primary)',
-                          width: `${diagnosis.percentage}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted text-center py-4">No diagnosis data available</p>
-              )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg" 
+                   style={{ backgroundColor: 'var(--hover-background)' }}>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Total Uploads</p>
+                  <p className="text-xs text-muted">All-time activity</p>
+                </div>
+                <div className="text-xl font-bold" style={{ color: 'var(--primary)' }}>
+                  {stats?.total_uploads || 0}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 rounded-lg" 
+                   style={{ backgroundColor: 'var(--hover-background)' }}>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Active Users</p>
+                  <p className="text-xs text-muted">Unique contributors</p>
+                </div>
+                <div className="text-xl font-bold" style={{ color: 'var(--secondary)' }}>
+                  {stats?.unique_users || 0}
+                </div>
+              </div>
+
+              <div className="text-center pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                <p className="text-xs text-muted">
+                  Platform active since {stats ? new Date(stats.earliest_upload).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Status Distribution */}
-        {stats && (
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-              Upload Status Distribution
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-success">{stats.status_distribution.completed}</div>
-                <div className="text-sm text-muted">Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-warning">{stats.status_distribution.processing}</div>
-                <div className="text-sm text-muted">Processing</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-info">{stats.status_distribution.uploaded}</div>
-                <div className="text-sm text-muted">Uploaded</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-error">{stats.status_distribution.failed}</div>
-                <div className="text-sm text-muted">Failed</div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Navigation>
     </ProtectedRoute>

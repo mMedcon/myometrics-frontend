@@ -1,27 +1,13 @@
 // Microservice API service for image uploads and analysis
-const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://localhost:8001';
+const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://localhost:8000';
 const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
 
 // Mock data for development mode
 const mockStats: Stats = {
   total_uploads: 1247,
-  uploads_today: 23,
-  uploads_this_week: 156,
-  uploads_this_month: 687,
-  average_confidence: 87.3,
-  common_diagnoses: [
-    { diagnosis: 'Normal', count: 523, percentage: 42 },
-    { diagnosis: 'Myocardial Infarction', count: 312, percentage: 25 },
-    { diagnosis: 'Arrhythmia', count: 187, percentage: 15 },
-    { diagnosis: 'Cardiomyopathy', count: 124, percentage: 10 },
-    { diagnosis: 'Valve Disease', count: 101, percentage: 8 },
-  ],
-  status_distribution: {
-    uploaded: 12,
-    processing: 8,
-    completed: 1198,
-    failed: 29,
-  },
+  unique_users: 89,
+  latest_upload: new Date().toISOString(),
+  earliest_upload: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
 };
 
 const mockUploads: UserUpload[] = [
@@ -121,9 +107,9 @@ const mockUploadDetails: { [key: string]: UploadDetails } = {
 
 export interface UploadResponse {
   upload_id: string;
-  status: 'uploaded' | 'processing' | 'completed' | 'failed';
-  filename: string;
-  upload_timestamp: string;
+  message: string;
+  diagnosis: string;
+  confidence: number;
 }
 
 export interface UploadDetails {
@@ -156,23 +142,17 @@ export interface UserUpload {
   confidence?: number;
 }
 
+export interface UserUploadsResponse {
+  user_id: string;
+  uploads: UserUpload[];
+  count: number;
+}
+
 export interface Stats {
   total_uploads: number;
-  uploads_today: number;
-  uploads_this_week: number;
-  uploads_this_month: number;
-  average_confidence: number;
-  common_diagnoses: Array<{
-    diagnosis: string;
-    count: number;
-    percentage: number;
-  }>;
-  status_distribution: {
-    uploaded: number;
-    processing: number;
-    completed: number;
-    failed: number;
-  };
+  unique_users: number;
+  latest_upload: string;
+  earliest_upload: string;
 }
 
 class MicroserviceAPI {
@@ -195,10 +175,12 @@ class MicroserviceAPI {
     return headers;
   }
 
-  private getFileUploadHeaders(): Record<string, string> {
+  private getFileUploadHeaders(filename: string): Record<string, string> {
     const token = localStorage.getItem('access_token');
     const user = localStorage.getItem('user');
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'X-File-Name': filename,
+    };
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -226,9 +208,9 @@ class MicroserviceAPI {
             clearInterval(interval);
             resolve({
               upload_id: `upload_dev_${Date.now()}`,
-              status: 'uploaded',
-              filename: file.name,
-              upload_timestamp: new Date().toISOString(),
+              message: 'Development mode upload simulation',
+              diagnosis: 'Normal',
+              confidence: 94.5,
             });
           }
         }, 100);
@@ -236,9 +218,6 @@ class MicroserviceAPI {
     }
 
     return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append('file', file);
-
       const xhr = new XMLHttpRequest();
 
       if (onProgress) {
@@ -275,12 +254,16 @@ class MicroserviceAPI {
       xhr.open('POST', `${MICROSERVICE_URL}/upload`);
       
       // Set headers
-      const headers = this.getFileUploadHeaders();
+      const headers = this.getFileUploadHeaders(file.name);
       Object.entries(headers).forEach(([key, value]) => {
         xhr.setRequestHeader(key, value);
       });
 
-      xhr.send(formData);
+      // Set content type
+      xhr.setRequestHeader('Content-Type', file.type);
+
+      // Send raw file bytes instead of FormData
+      xhr.send(file);
     });
   }
 
@@ -322,20 +305,19 @@ class MicroserviceAPI {
     return response.json();
   }
 
-  async getUserUploads(limit = 50, offset = 0): Promise<UserUpload[]> {
+  async getUserUploads(userId: string, limit = 50, offset = 0): Promise<UserUploadsResponse> {
     if (isDevMode) {
       // Return paginated mock data
       const start = offset;
       const end = start + limit;
-      return Promise.resolve(mockUploads.slice(start, end));
+      return Promise.resolve({
+        user_id: userId,
+        uploads: mockUploads.slice(start, end),
+        count: mockUploads.length,
+      });
     }
 
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-    });
-
-    const response = await fetch(`${MICROSERVICE_URL}/uploads?${params}`, {
+    const response = await fetch(`${MICROSERVICE_URL}/user/${userId}/uploads`, {
       headers: this.getAuthHeaders(),
     });
 
@@ -364,6 +346,47 @@ class MicroserviceAPI {
     return response.json();
   }
 
+  async saveUpload(userId: string, uploadId: string): Promise<{ message: string }> {
+    if (isDevMode) {
+      return Promise.resolve({ message: 'Upload saved successfully (development mode)' });
+    }
+
+    const params = new URLSearchParams({
+      user_id: userId,
+      upload_id: uploadId,
+    });
+
+    const response = await fetch(`${MICROSERVICE_URL}/save-upload?${params}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to save upload');
+    }
+
+    return response.json();
+  }
+
+  async getPreprocessedDicom(uploadId: string): Promise<Blob> {
+    if (isDevMode) {
+      // Return a mock blob for development
+      return Promise.resolve(new Blob(['Mock DICOM data'], { type: 'application/dicom' }));
+    }
+
+    const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/preprocessed-dicom`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch preprocessed DICOM');
+    }
+
+    return response.blob();
+  }
+
   async deleteUpload(uploadId: string): Promise<void> {
     const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}`, {
       method: 'DELETE',
@@ -377,6 +400,27 @@ class MicroserviceAPI {
   }
 
   async retryAnalysis(uploadId: string): Promise<UploadDetails> {
+    if (isDevMode) {
+      // Return mock retry result
+      return Promise.resolve({
+        upload_id: uploadId,
+        filename: `retried_file_${uploadId.slice(-3)}.jpg`,
+        status: 'processing',
+        upload_timestamp: new Date().toISOString(),
+        analysis_result: {
+          diagnosis: 'Retrying Analysis',
+          confidence: 0,
+          findings: ['Analysis restarted', 'Processing in progress'],
+          recommendations: ['Please wait for analysis to complete']
+        },
+        metadata: {
+          file_size: 1024000,
+          image_dimensions: { width: 800, height: 600 },
+          file_type: 'image/jpeg'
+        }
+      });
+    }
+
     const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/retry`, {
       method: 'POST',
       headers: this.getAuthHeaders(),

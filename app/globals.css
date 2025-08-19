@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  /* Light theme colors */
+  /* Light theme colors - Sci-fi gradient theme */
   --text: #030707;
   --background: #f7fcfd;
-  --primary: #49b856;
-  --secondary: #FFDE5F;
-  --accent: #53c4a6;
+  --primary: #00A3FF;
+  --secondary: #00E5C9;
+  --accent: #1976D2;
   --foreground: #030707;
+  
+  /* Gradient colors */
+  --sci-blue: #00A3FF;
+  --sci-teal: #00E5C9;
+  --sci-cyan: #00BCD4;
+  --sci-dark-blue: #1976D2;
   
   /* Additional UI colors */
   --card-background: #ffffff;
@@ -16,7 +22,7 @@
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
-  --info: #3b82f6;
+  --info: #00A3FF;
   
   /* Interactive states */
   --hover-background: #f3f4f6;
@@ -25,13 +31,19 @@
 
 
 [data-theme="dark"] {
-  /* Dark theme colors */
+  /* Dark theme colors - Sci-fi gradient theme */
   --text: #f8fffe;
   --background: #020405;
-  --primary: #49b856;
-  --secondary: #FFDE5F;
-  --accent: #53c4a6;
+  --primary: #00A3FF;
+  --secondary: #00E5C9;
+  --accent: #1976D2;
   --foreground: #f8fffe;
+  
+  /* Gradient colors */
+  --sci-blue: #00A3FF;
+  --sci-teal: #00E5C9;
+  --sci-cyan: #00BCD4;
+  --sci-dark-blue: #1976D2;
   
   /* Additional UI colors for dark theme */
   --card-background: #1f2937;
@@ -40,7 +52,7 @@
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
-  --info: #3b82f6;
+  --info: #00A3FF;
   
   /* Interactive states */
   --hover-background: #374151;
@@ -105,41 +117,76 @@ body {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--sci-blue) 0%, var(--sci-dark-blue) 100%);
   color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 163, 255, 0.3);
 }
 
 .btn-primary:hover {
-  background: #26a8b7;
+  background: linear-gradient(135deg, var(--sci-dark-blue) 0%, var(--sci-blue) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 163, 255, 0.4);
 }
 
 .btn-secondary {
-  background: var(--secondary);
-  color: var(--text);
+  background: linear-gradient(135deg, var(--sci-teal) 0%, var(--sci-cyan) 100%);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 229, 201, 0.3);
 }
 
 .btn-secondary:hover {
-  background: #ffcd33;
+  background: linear-gradient(135deg, var(--sci-cyan) 0%, var(--sci-teal) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 229, 201, 0.4);
 }
 
 .btn-accent {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--sci-blue) 100%);
   color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 
 .btn-accent:hover {
-  background: #45b094;
+  background: linear-gradient(135deg, var(--sci-blue) 0%, var(--accent) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4);
 }
 
 .btn-outline {
   background: transparent;
   border: 2px solid var(--primary);
   color: var(--primary);
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .btn-outline:hover {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--sci-blue) 0%, var(--sci-dark-blue) 100%);
   color: white;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 163, 255, 0.3);
 }
 
 .text-muted {

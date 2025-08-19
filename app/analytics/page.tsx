@@ -230,15 +230,58 @@ export default function AnalyticsPage() {
             />
           )}
 
-          {/* Diagnosis Distribution */}
+          {/* Platform Overview Chart */}
           {stats && (
             <SimpleBarChart
               data={{
-                labels: stats.common_diagnoses.slice(0, 5).map(item => item.diagnosis),
-                data: stats.common_diagnoses.slice(0, 5).map(item => item.count),
+                labels: ['Total Uploads', 'Unique Users'],
+                data: [stats.total_uploads, stats.unique_users],
               }}
-              title="Top Diagnoses"
+              title="Platform Overview"
             />
+          )}
+
+          {/* Usage Timeline */}
+          {stats && (
+            <div className="card">
+              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
+                Platform Timeline
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg" 
+                     style={{ backgroundColor: 'var(--hover-background)' }}>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Platform Started</p>
+                    <p className="text-xs text-muted">First upload received</p>
+                  </div>
+                  <div className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
+                    {new Date(stats.earliest_upload).toLocaleDateString()}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg" 
+                     style={{ backgroundColor: 'var(--hover-background)' }}>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Latest Activity</p>
+                    <p className="text-xs text-muted">Most recent upload</p>
+                  </div>
+                  <div className="text-lg font-bold" style={{ color: 'var(--secondary)' }}>
+                    {new Date(stats.latest_upload).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div className="text-center pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-sm text-muted">
+                    Platform has been active for{' '}
+                    {Math.ceil(
+                      (new Date(stats.latest_upload).getTime() - new Date(stats.earliest_upload).getTime()) 
+                      / (1000 * 60 * 60 * 24)
+                    )}{' '}
+                    days
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -309,47 +352,49 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Status Distribution */}
+        {/* Platform Usage Summary */}
         {stats && (
           <div className="card">
             <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-              Upload Status Distribution
+              Platform Usage Summary
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-success mb-1">
-                  {stats.status_distribution.completed}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="text-center p-6 rounded-lg" 
+                   style={{ backgroundColor: 'var(--hover-background)' }}>
+                <div className="text-4xl font-bold mb-2" style={{ color: 'var(--primary)' }}>
+                  {stats.total_uploads}
                 </div>
-                <div className="text-sm text-muted">Completed</div>
-                <div className="text-xs text-muted">
-                  {((stats.status_distribution.completed / stats.total_uploads) * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-warning mb-1">
-                  {stats.status_distribution.processing}
-                </div>
-                <div className="text-sm text-muted">Processing</div>
-                <div className="text-xs text-muted">
-                  {((stats.status_distribution.processing / stats.total_uploads) * 100).toFixed(1)}%
+                <div className="text-sm text-muted">Total Uploads</div>
+                <div className="text-xs text-muted mt-1">
+                  All-time medical image uploads
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-info mb-1">
-                  {stats.status_distribution.uploaded}
+              
+              <div className="text-center p-6 rounded-lg" 
+                   style={{ backgroundColor: 'var(--hover-background)' }}>
+                <div className="text-4xl font-bold mb-2" style={{ color: 'var(--secondary)' }}>
+                  {stats.unique_users}
                 </div>
-                <div className="text-sm text-muted">Uploaded</div>
-                <div className="text-xs text-muted">
-                  {((stats.status_distribution.uploaded / stats.total_uploads) * 100).toFixed(1)}%
+                <div className="text-sm text-muted">Active Users</div>
+                <div className="text-xs text-muted mt-1">
+                  Healthcare professionals using platform
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-error mb-1">
-                  {stats.status_distribution.failed}
+            </div>
+
+            <div className="mt-6 p-4 rounded-lg" 
+                 style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 5%, transparent)' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                    Average uploads per user
+                  </p>
+                  <p className="text-xs text-muted">
+                    Based on total activity
+                  </p>
                 </div>
-                <div className="text-sm text-muted">Failed</div>
-                <div className="text-xs text-muted">
-                  {((stats.status_distribution.failed / stats.total_uploads) * 100).toFixed(1)}%
+                <div className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>
+                  {stats.unique_users > 0 ? Math.round(stats.total_uploads / stats.unique_users) : 0}
                 </div>
               </div>
             </div>
