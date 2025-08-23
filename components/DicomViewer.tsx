@@ -59,25 +59,60 @@ const DicomViewer: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       
-      // Validate DICOM file with dcmjs
-      try {
-        dcmjs.data.DicomMessage.readFile(arrayBuffer);
-      } catch (dcmError) {
-        throw new Error('Invalid DICOM file format');
-      }
-
-      // Create blob URL for cornerstone
-      const blob = new Blob([arrayBuffer], { type: 'application/dicom' });
-      const blobUrl = URL.createObjectURL(blob);
-      const imageId = `wadouri:${blobUrl}`;
+      // Try different approaches to load the DICOM file
+      let imageId: string | null = null;
       
-      // Test if cornerstone can load the image
+      // Method 1: Try with blob URL
       try {
-        await cornerstone.loadImage(imageId);
+        const blob = new Blob([arrayBuffer], { type: 'application/dicom' });
+        const blobUrl = URL.createObjectURL(blob);
+        const testImageId = `wadouri:${blobUrl}`;
+        
+        await cornerstone.loadImage(testImageId);
+        imageId = testImageId;
+        console.log('Successfully loaded DICOM with blob URL');
+      } catch (blobError) {
+        console.warn('Blob URL method failed:', blobError);
+      }
+      
+      // Method 2: Try with base64 data URI if blob failed
+      if (!imageId) {
+        try {
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const base64String = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
+          const dataUri = `data:application/dicom;base64,${base64String}`;
+          const testImageId = `wadouri:${dataUri}`;
+          
+          await cornerstone.loadImage(testImageId);
+          imageId = testImageId;
+          console.log('Successfully loaded DICOM with data URI');
+        } catch (dataUriError) {
+          console.warn('Data URI method failed:', dataUriError);
+        }
+      }
+      
+      // Method 3: Try direct parsing with dicom-parser
+      if (!imageId) {
+        try {
+          const byteArray = new Uint8Array(arrayBuffer);
+          const dataset = dicomParser.parseDicom(byteArray);
+          
+          if (dataset) {
+            const blob = new Blob([arrayBuffer], { type: 'application/dicom' });
+            const blobUrl = URL.createObjectURL(blob);
+            imageId = `wadouri:${blobUrl}`;
+            console.log('DICOM parsed with dicom-parser, trying to load...');
+            await cornerstone.loadImage(imageId);
+          }
+        } catch (parserError) {
+          console.warn('dicom-parser method failed:', parserError);
+        }
+      }
+      
+      if (imageId) {
         setImageId(imageId);
-      } catch (cornerstoneError) {
-        URL.revokeObjectURL(blobUrl);
-        throw new Error('Cornerstone could not load the DICOM image');
+      } else {
+        throw new Error('load DICOM file with any method. Please check if the file is a valid DICOM image.');
       }
       
     } catch (err: any) {
