@@ -1,8 +1,24 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { microserviceAPI, UploadResponse } from '@/lib/api';
+import dynamic from 'next/dynamic';
+
+import SimpleImageViewer from './SimpleImageViewer';
+
+// Dynamically import DicomViewer only when needed
+const DicomViewer = dynamic(() => import('./DicomViewer'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'black', borderRadius: 8 }}>
+      <div style={{ color: 'white', textAlign: 'center' }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #ffffff30', borderTop: '4px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
+        Loading DICOM Viewer...
+      </div>
+    </div>
+  )
+});
 
 interface UploadProgress {
   percentage: number;
@@ -20,11 +36,20 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ percentage: 0, stage: 'uploading' });
   const [error, setError] = useState('');
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
-  const [preprocessedImageUrl, setPreprocessedImageUrl] = useState<string | null>(null);
+  const [preprocessedImageBlob, setPreprocessedImageBlob] = useState<Blob | null>(null);
   const [showPreprocessedImage, setShowPreprocessedImage] = useState(false);
   const [approvedForAnalysis, setApprovedForAnalysis] = useState(false);
+  const [isPreprocessedDicom, setIsPreprocessedDicom] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Helper function to determine if file is DICOM
+  const isDicomFile = (file: File | null): boolean => {
+    if (!file) return false;
+    return file.name.toLowerCase().endsWith('.dcm') || 
+           file.type === 'application/dicom' ||
+           file.name.toLowerCase().includes('dicom');
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -64,9 +89,10 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     setSelectedFile(file);
     setError('');
     setUploadResult(null);
-    setPreprocessedImageUrl(null);
+    setPreprocessedImageBlob(null);
     setShowPreprocessedImage(false);
     setApprovedForAnalysis(false);
+  setIsPreprocessedDicom(null);
   };
 
   const handleUpload = async () => {
@@ -89,8 +115,9 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
       setUploadProgress({ percentage: 100, stage: 'preprocessing' });
       
       const preprocessedBlob = await microserviceAPI.getPreprocessedDicom(result.upload_id);
-      const imageUrl = URL.createObjectURL(preprocessedBlob);
-      setPreprocessedImageUrl(imageUrl);
+      setPreprocessedImageBlob(preprocessedBlob);
+  // reset detection; a separate effect will compute if this is DICOM
+  setIsPreprocessedDicom(null);
       
       setUploadProgress({ percentage: 100, stage: 'reviewing' });
       setShowPreprocessedImage(true);
@@ -137,14 +164,12 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     setSelectedFile(null);
     setError('');
     setUploadResult(null);
-    setPreprocessedImageUrl(null);
+    setPreprocessedImageBlob(null);
     setShowPreprocessedImage(false);
     setApprovedForAnalysis(false);
+  setIsPreprocessedDicom(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-    if (preprocessedImageUrl) {
-      URL.revokeObjectURL(preprocessedImageUrl);
     }
   };
 
@@ -155,6 +180,35 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Detect whether the preprocessed blob is a DICOM file (by MIME type or magic bytes)
+  useEffect(() => {
+    let cancelled = false;
+    const detectDicom = async () => {
+      if (!preprocessedImageBlob) {
+        setIsPreprocessedDicom(null);
+        return;
+      }
+      // Quick check via MIME type
+      if (preprocessedImageBlob.type && preprocessedImageBlob.type.toLowerCase().includes('dicom')) {
+        if (!cancelled) setIsPreprocessedDicom(true);
+        return;
+      }
+      try {
+        // Read bytes 128-132 to check for 'DICM' prefix
+        const header = await preprocessedImageBlob.slice(128, 132).arrayBuffer();
+        const view = new Uint8Array(header);
+        const tag = String.fromCharCode(...view);
+        if (!cancelled) setIsPreprocessedDicom(tag === 'DICM');
+      } catch (e) {
+        if (!cancelled) setIsPreprocessedDicom(false);
+      }
+    };
+    detectDicom();
+    return () => {
+      cancelled = true;
+    };
+  }, [preprocessedImageBlob]);
 
   const getStageDescription = () => {
     switch (uploadProgress.stage) {
@@ -205,7 +259,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
                 Drop your medical image here, or click to browse
               </p>
               <p className="text-sm text-muted mt-1">
-                Supports JPEG, PNG • Max 10MB
+                Supports DICOM (.dcm), JPEG, PNG • Max 10MB
               </p>
             </div>
           </div>
@@ -213,7 +267,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept="image/jpeg,image/jpg,image/png"
+            accept=".dcm,application/dicom,image/jpeg,image/jpg,image/png"
             onChange={handleFileInputChange}
           />
         </div>
@@ -285,7 +339,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
       )}
 
       {/* Preprocessed Image Review */}
-      {showPreprocessedImage && preprocessedImageUrl && !approvedForAnalysis && (
+      {showPreprocessedImage && preprocessedImageBlob && !approvedForAnalysis && (
         <div className="card">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -302,17 +356,22 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             </div>
             
             <p className="text-sm text-muted">
-              Please review the anonymized image below before proceeding with AI analysis. 
-              Ensure all sensitive information has been properly removed.
+              Please review the anonymized DICOM image below before proceeding with AI analysis. 
+              Use the viewer tools to examine the image. Ensure all sensitive information has been properly removed.
             </p>
 
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <img
-                src={preprocessedImageUrl}
-                alt="Preprocessed DICOM"
-                className="max-w-full h-auto mx-auto rounded border"
-                style={{ maxHeight: '400px' }}
-              />
+              {isPreprocessedDicom ? (
+                <DicomViewer 
+                  dicomBlob={preprocessedImageBlob}
+                  onError={(error: string) => setError(error)}
+                />
+              ) : (
+                <SimpleImageViewer 
+                  imageBlob={preprocessedImageBlob}
+                  alt="Preprocessed Medical Image"
+                />
+              )}
             </div>
 
             <div className="flex space-x-3">
