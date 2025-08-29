@@ -19,6 +19,12 @@ export type {
   UploadDetails,
   UserUpload,
   Stats,
+  BatchUploadResponse,
+  BatchStatusResponse,
+  UserBatch,
+  UserBatchesResponse,
+  BatchFile,
+  BatchFilesResponse,
 } from './microservice';
 
 export type {

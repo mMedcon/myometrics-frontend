@@ -1,45 +1,30 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { microserviceAPI, UploadResponse } from '@/lib/api';
-import dynamic from 'next/dynamic';
+import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api';
 
-import SimpleImageViewer from './SimpleImageViewer';
 
-// Dynamically import DicomViewer only when needed
-const DicomViewer = dynamic(() => import('./DicomViewer'), {
-  ssr: false,
-  loading: () => (
-    <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'black', borderRadius: 8 }}>
-      <div style={{ color: 'white', textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '4px solid #ffffff30', borderTop: '4px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
-        Loading DICOM Viewer...
-      </div>
-    </div>
-  )
-});
 
 interface UploadProgress {
   percentage: number;
-  stage: 'uploading' | 'preprocessing' | 'reviewing' | 'analyzing' | 'complete';
+  stage: 'uploading' | 'analyzing' | 'complete';
 }
 
 interface UploadWorkflowProps {
-  onUploadComplete?: (result: UploadResponse) => void;
+  onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
 }
 
 export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ percentage: 0, stage: 'uploading' });
   const [error, setError] = useState('');
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
-  const [preprocessedImageBlob, setPreprocessedImageBlob] = useState<Blob | null>(null);
-  const [showPreprocessedImage, setShowPreprocessedImage] = useState(false);
-  const [approvedForAnalysis, setApprovedForAnalysis] = useState(false);
-  const [isPreprocessedDicom, setIsPreprocessedDicom] = useState<boolean | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchUploadResponse | null>(null);
+  const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
+  const [isBatchMode, setIsBatchMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -49,6 +34,59 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     return file.name.toLowerCase().endsWith('.dcm') || 
            file.type === 'application/dicom' ||
            file.name.toLowerCase().includes('dicom');
+  };
+
+  // Helper function to traverse folders and extract files
+  const traverseFileTree = async (item: any, path: string = ''): Promise<File[]> => {
+    return new Promise((resolve) => {
+      if (item.isFile) {
+        item.file((file: File) => {
+          resolve([file]);
+        });
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        const files: File[] = [];
+        
+        const readEntries = () => {
+          dirReader.readEntries(async (entries: any[]) => {
+            if (entries.length === 0) {
+              resolve(files);
+              return;
+            }
+            
+            const promises = entries.map(entry => 
+              traverseFileTree(entry, path + item.name + '/')
+            );
+            
+            try {
+              const results = await Promise.all(promises);
+              files.push(...results.flat());
+              readEntries(); // Continue reading if there are more entries
+            } catch (error) {
+              resolve(files);
+            }
+          });
+        };
+        
+        readEntries();
+      } else {
+        resolve([]);
+      }
+    });
+  };
+
+  // Helper function to filter valid medical image files
+  const filterMedicalFiles = (files: File[]): File[] => {
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.dcm'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/dicom'];
+    
+    return files.filter(file => {
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+      const isValidType = allowedTypes.includes(file.type);
+      const isValidExtension = allowedExtensions.includes(fileExtension);
+      
+      return isValidType || isValidExtension;
+    });
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -61,66 +99,185 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelection(files[0]);
+    const items = Array.from(e.dataTransfer.items);
+    
+    if (items.length > 0) {
+      setError('Processing files...');
+      
+      try {
+        const allFiles: File[] = [];
+        
+        // Process each dropped item (could be files or folders)
+        const promises = items.map(async (item) => {
+          if (item.kind === 'file') {
+            const entry = item.webkitGetAsEntry();
+            if (entry) {
+              return await traverseFileTree(entry);
+            } else {
+              // Fallback for browsers that don't support webkitGetAsEntry
+              const file = item.getAsFile();
+              return file ? [file] : [];
+            }
+          }
+          return [];
+        });
+
+        const results = await Promise.all(promises);
+        allFiles.push(...results.flat());
+
+        // Filter to only include valid medical image files
+        const validFiles = filterMedicalFiles(allFiles);
+        
+        if (validFiles.length === 0) {
+          setError('No valid medical image files found. Please ensure the folder contains DICOM (.dcm), JPEG, or PNG files.');
+          return;
+        }
+
+        if (validFiles.length !== allFiles.length) {
+          const filteredCount = allFiles.length - validFiles.length;
+          setError(`Found ${validFiles.length} valid files (${filteredCount} files were filtered out as they are not medical images).`);
+          // Clear the error after showing the info message
+          setTimeout(() => setError(''), 3000);
+        } else {
+          setError(''); // Clear any previous errors
+        }
+
+        handleFileSelection(validFiles);
+        
+      } catch (error) {
+        setError('Error processing dropped items. Please try selecting files directly.');
+        console.error('Drop processing error:', error);
+      }
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileSelection(files[0]);
+      const fileArray = Array.from(files);
+      const validFiles = filterMedicalFiles(fileArray);
+      
+      if (validFiles.length === 0) {
+        setError('No valid medical image files selected. Please select DICOM (.dcm), JPEG, or PNG files.');
+        return;
+      }
+
+      if (validFiles.length !== fileArray.length) {
+        const filteredCount = fileArray.length - validFiles.length;
+        setError(`Selected ${validFiles.length} valid files (${filteredCount} files were filtered out as they are not medical images).`);
+        // Clear the error after showing the info message
+        setTimeout(() => setError(''), 3000);
+      }
+
+      handleFileSelection(validFiles);
     }
   };
 
-  const handleFileSelection = (file: File) => {
-    const validation = microserviceAPI.validateFile(file);
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid file');
-      return;
+  const handleFileSelection = (files: File[]) => {
+    if (files.length === 1) {
+      // Single file upload
+      const validation = microserviceAPI.validateFile(files[0]);
+      if (!validation.valid) {
+        setError(validation.error || 'Invalid file');
+        return;
+      }
+      setIsBatchMode(false);
+    } else {
+      // Batch upload
+      const validation = microserviceAPI.validateBatchFiles(files);
+      if (!validation.valid) {
+        setError(validation.errors.join(', '));
+        return;
+      }
+      setIsBatchMode(true);
     }
 
-    setSelectedFile(file);
+    setSelectedFiles(files);
     setError('');
     setUploadResult(null);
-    setPreprocessedImageBlob(null);
-    setShowPreprocessedImage(false);
-    setApprovedForAnalysis(false);
-  setIsPreprocessedDicom(null);
+    setBatchResult(null);
+    setBatchStatus(null);
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFiles || selectedFiles.length === 0) return;
 
     setIsUploading(true);
     setError('');
 
     try {
-      // Stage 1: Upload file
       setUploadProgress({ percentage: 0, stage: 'uploading' });
       
-      const result = await microserviceAPI.uploadFile(selectedFile, (progress) => {
-        setUploadProgress({ percentage: progress, stage: 'uploading' });
-      });
+      if (isBatchMode) {
+        // Batch upload
+        const result = await microserviceAPI.uploadBatch(selectedFiles, (progress) => {
+          setUploadProgress({ percentage: progress, stage: 'uploading' });
+        });
 
-      setUploadResult(result);
+        setBatchResult(result);
+        
+        // Start polling for batch status
+        const pollInterval = setInterval(async () => {
+          try {
+            const status = await microserviceAPI.getBatchStatus(result.batch_id);
+            setBatchStatus(status);
+            
+            if (status.status === 'completed' || status.status === 'failed') {
+              clearInterval(pollInterval);
+              setUploadProgress({ percentage: 100, stage: 'complete' });
+              
+              if (onUploadComplete) {
+                onUploadComplete(result);
+              }
+              
+              // Redirect to batch results page
+              setTimeout(() => {
+                router.push(`/batch/${result.batch_id}`);
+              }, 2000);
+            } else {
+              setUploadProgress({ 
+                percentage: status.progress_percentage, 
+                stage: status.status === 'processing' ? 'analyzing' : 'uploading' 
+              });
+            }
+          } catch (err) {
+            clearInterval(pollInterval);
+            setError('Failed to fetch batch status');
+          }
+        }, 2000);
+        
+      } else {
+        // Single file upload
+        const result = await microserviceAPI.uploadFile(selectedFiles[0], (progress) => {
+          setUploadProgress({ percentage: progress, stage: 'uploading' });
+        });
 
-      // Stage 2: Get preprocessed image for review
-      setUploadProgress({ percentage: 100, stage: 'preprocessing' });
-      
-      const preprocessedBlob = await microserviceAPI.getPreprocessedDicom(result.upload_id);
-      setPreprocessedImageBlob(preprocessedBlob);
-  // reset detection; a separate effect will compute if this is DICOM
-  setIsPreprocessedDicom(null);
-      
-      setUploadProgress({ percentage: 100, stage: 'reviewing' });
-      setShowPreprocessedImage(true);
+        setUploadResult(result);
+        setUploadProgress({ percentage: 100, stage: 'analyzing' });
+        
+        // Get current user for save operation
+        const user = localStorage.getItem('user');
+        if (user) {
+          const userData = JSON.parse(user);
+          await microserviceAPI.saveUpload(userData.id.toString(), result.upload_id);
+        }
+
+        setUploadProgress({ percentage: 100, stage: 'complete' });
+
+        if (onUploadComplete) {
+          onUploadComplete(result);
+        }
+
+        // Redirect to upload details page after a brief delay
+        setTimeout(() => {
+          router.push(`/upload/${result.upload_id}`);
+        }, 2000);
+      }
 
     } catch (err: any) {
       setError(err.message || 'Upload failed');
@@ -130,44 +287,13 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     }
   };
 
-  const handleApproveForAnalysis = async () => {
-    if (!uploadResult) return;
-
-    try {
-      setUploadProgress({ percentage: 0, stage: 'analyzing' });
-      
-      // Get current user for save operation
-      const user = localStorage.getItem('user');
-      if (user) {
-        const userData = JSON.parse(user);
-        await microserviceAPI.saveUpload(userData.id.toString(), uploadResult.upload_id);
-      }
-
-      setUploadProgress({ percentage: 100, stage: 'complete' });
-      setApprovedForAnalysis(true);
-
-      if (onUploadComplete) {
-        onUploadComplete(uploadResult);
-      }
-
-      // Redirect to upload details page after a brief delay
-      setTimeout(() => {
-        router.push(`/upload/${uploadResult.upload_id}`);
-      }, 2000);
-
-    } catch (err: any) {
-      setError(err.message || 'Failed to approve for analysis');
-    }
-  };
-
   const handleRemoveFile = () => {
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setError('');
     setUploadResult(null);
-    setPreprocessedImageBlob(null);
-    setShowPreprocessedImage(false);
-    setApprovedForAnalysis(false);
-  setIsPreprocessedDicom(null);
+    setBatchResult(null);
+    setBatchStatus(null);
+    setIsBatchMode(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -181,43 +307,16 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Detect whether the preprocessed blob is a DICOM file (by MIME type or magic bytes)
-  useEffect(() => {
-    let cancelled = false;
-    const detectDicom = async () => {
-      if (!preprocessedImageBlob) {
-        setIsPreprocessedDicom(null);
-        return;
-      }
-      // Quick check via MIME type
-      if (preprocessedImageBlob.type && preprocessedImageBlob.type.toLowerCase().includes('dicom')) {
-        if (!cancelled) setIsPreprocessedDicom(true);
-        return;
-      }
-      try {
-        // Read bytes 128-132 to check for 'DICM' prefix
-        const header = await preprocessedImageBlob.slice(128, 132).arrayBuffer();
-        const view = new Uint8Array(header);
-        const tag = String.fromCharCode(...view);
-        if (!cancelled) setIsPreprocessedDicom(tag === 'DICM');
-      } catch (e) {
-        if (!cancelled) setIsPreprocessedDicom(false);
-      }
-    };
-    detectDicom();
-    return () => {
-      cancelled = true;
-    };
-  }, [preprocessedImageBlob]);
+  const getTotalFileSize = () => {
+    return selectedFiles.reduce((total, file) => total + file.size, 0);
+  };
+
+  // Remove the DICOM detection effect since we no longer need it
 
   const getStageDescription = () => {
     switch (uploadProgress.stage) {
       case 'uploading':
         return 'Uploading file to server...';
-      case 'preprocessing':
-        return 'Processing and anonymizing DICOM data...';
-      case 'reviewing':
-        return 'Ready for clinical review';
       case 'analyzing':
         return 'Running AI analysis...';
       case 'complete':
@@ -230,7 +329,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   return (
     <div className="space-y-6">
       {/* Upload Area */}
-      {!selectedFile ? (
+      {selectedFiles.length === 0 ? (
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
             dragActive
@@ -256,11 +355,35 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             </div>
             <div>
               <p className="text-lg font-medium" style={{ color: 'var(--text)' }}>
-                Drop your medical image here, or click to browse
+                Drop your medical images or folders here, or click to browse
               </p>
               <p className="text-sm text-muted mt-1">
-                Supports DICOM (.dcm), JPEG, PNG • Max 10MB
+                Supports DICOM (.dcm), JPEG, PNG • Max 10MB per file • Drag folders or select multiple files
               </p>
+              <div className="mt-3 space-x-2">
+                <button
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('webkitdirectory');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="text-sm px-3 py-1 rounded border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Select Files
+                </button>
+                <button
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.setAttribute('webkitdirectory', '');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="text-sm px-3 py-1 rounded border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Select Folder
+                </button>
+              </div>
             </div>
           </div>
           <input
@@ -269,16 +392,19 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             className="hidden"
             accept=".dcm,application/dicom,image/jpeg,image/jpg,image/png"
             onChange={handleFileInputChange}
+            multiple
           />
         </div>
       ) : (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Selected File</h3>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
+              Selected Files {isBatchMode && `(${selectedFiles.length} files)`}
+            </h3>
             <button
               onClick={handleRemoveFile}
               className="text-red-500 hover:text-red-700 p-1"
-              title="Remove file"
+              title="Remove files"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -286,25 +412,52 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             </button>
           </div>
           
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" 
-                 style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary)' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+          {isBatchMode ? (
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center space-x-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" 
+                     style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary)' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-blue-800 dark:text-blue-200">Batch Upload Mode</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    {selectedFiles.length} files • {formatFileSize(getTotalFileSize())} total
+                  </p>
+                </div>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                    <span className="truncate flex-1">{file.name}</span>
+                    <span className="text-muted ml-2">{formatFileSize(file.size)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="font-medium" style={{ color: 'var(--text)' }}>{selectedFile.name}</p>
-              <p className="text-sm text-muted">{formatFileSize(selectedFile.size)}</p>
+          ) : (
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" 
+                   style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)' }}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-medium" style={{ color: 'var(--text)' }}>{selectedFiles[0]?.name}</p>
+                <p className="text-sm text-muted">{formatFileSize(selectedFiles[0]?.size || 0)}</p>
+              </div>
             </div>
-          </div>
+          )}
 
-          {!isUploading && !showPreprocessedImage && (
+          {!isUploading && (
             <button
               onClick={handleUpload}
               className="btn-primary w-full"
             >
-              Upload and Process
+              {isBatchMode ? `Upload and Analyze Batch (${selectedFiles.length} files)` : 'Upload and Analyze'}
             </button>
           )}
         </div>
@@ -338,60 +491,6 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         </div>
       )}
 
-      {/* Preprocessed Image Review */}
-      {showPreprocessedImage && preprocessedImageBlob && !approvedForAnalysis && (
-        <div className="card">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
-                Clinical Review Required
-              </h3>
-              <span className="px-3 py-1 text-xs font-medium rounded-full"
-                    style={{ 
-                      backgroundColor: 'color-mix(in srgb, var(--warning) 10%, transparent)',
-                      color: 'var(--warning)'
-                    }}>
-                Pending Review
-              </span>
-            </div>
-            
-            <p className="text-sm text-muted">
-              Please review the anonymized DICOM image below before proceeding with AI analysis. 
-              Use the viewer tools to examine the image. Ensure all sensitive information has been properly removed.
-            </p>
-
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              {isPreprocessedDicom ? (
-                <DicomViewer 
-                  dicomBlob={preprocessedImageBlob}
-                  onError={(error: string) => setError(error)}
-                />
-              ) : (
-                <SimpleImageViewer 
-                  imageBlob={preprocessedImageBlob}
-                  alt="Preprocessed Medical Image"
-                />
-              )}
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={handleApproveForAnalysis}
-                className="btn-primary flex-1"
-              >
-                Approve for AI Analysis
-              </button>
-              <button
-                onClick={handleRemoveFile}
-                className="btn-outline px-6"
-              >
-                Reject & Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Analysis Progress */}
       {uploadProgress.stage === 'analyzing' && (
         <div className="card">
@@ -415,7 +514,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
       )}
 
       {/* Success Message */}
-      {uploadResult && approvedForAnalysis && (
+      {((uploadResult && uploadProgress.stage === 'complete') || (batchResult && batchStatus?.status === 'completed')) && (
         <div className="card border-green-200 dark:border-green-800">
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -426,26 +525,43 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">
-                  Analysis Complete!
+                  {batchResult ? 'Batch Analysis Complete!' : 'Analysis Complete!'}
                 </h3>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  Upload ID: {uploadResult.upload_id}
+                  {batchResult ? `Batch ID: ${batchResult.batch_id}` : `Upload ID: ${uploadResult?.upload_id}`}
                 </p>
               </div>
             </div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="font-medium text-green-800 dark:text-green-200">Diagnosis:</p>
-                  <p className="text-green-700 dark:text-green-300">{uploadResult.diagnosis}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-green-800 dark:text-green-200">Confidence:</p>
-                  <p className="text-green-700 dark:text-green-300">{uploadResult.confidence}%</p>
+            {uploadResult && (
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200">Diagnosis:</p>
+                    <p className="text-green-700 dark:text-green-300">{uploadResult.diagnosis}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200">Confidence:</p>
+                    <p className="text-green-700 dark:text-green-300">{uploadResult.confidence}%</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {batchStatus && (
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200">Total Files:</p>
+                    <p className="text-green-700 dark:text-green-300">{batchStatus.total_files}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200">Processed:</p>
+                    <p className="text-green-700 dark:text-green-300">{batchStatus.processed_files}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <p className="text-sm text-muted">
               Redirecting to detailed results...
