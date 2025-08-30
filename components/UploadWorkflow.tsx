@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api';
 
@@ -26,7 +26,88 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Optimized polling with exponential backoff
+  const startBatchStatusPolling = (batchId: string) => {
+    // Clear any existing polling
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    let pollCount = 0;
+    const maxPollCount = 30; // Maximum 30 polls (about 10 minutes total)
+    
+    const poll = async () => {
+      try {
+        pollCount++;
+        const status = await microserviceAPI.getBatchStatus(batchId);
+        setBatchStatus(status);
+        
+        if (status.status === 'completed' || status.status === 'failed') {
+          // Stop polling - batch is done
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          
+          setUploadProgress({ percentage: 100, stage: 'complete' });
+          
+          if (onUploadComplete && batchResult) {
+            onUploadComplete(batchResult);
+          }
+          
+          // Redirect to batch results page
+          setTimeout(() => {
+            router.push(`/batch/${batchId}`);
+          }, 2000);
+          
+        } else if (pollCount >= maxPollCount) {
+          // Stop polling after max attempts
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setError('Batch processing is taking longer than expected. Please check the batch status manually.');
+          
+        } else {
+          // Update progress and continue polling
+          setUploadProgress({ 
+            percentage: status.progress_percentage, 
+            stage: status.status === 'processing' ? 'analyzing' : 'uploading' 
+          });
+          
+          // Schedule next poll with exponential backoff
+          const nextInterval = Math.min(5000 + (pollCount * 2000), 30000); // 5s, 7s, 9s... max 30s
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+          }
+          pollIntervalRef.current = setTimeout(poll, nextInterval);
+        }
+        
+      } catch (err) {
+        console.error('Batch status polling error:', err);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        setError('Failed to fetch batch status. Please refresh to check manually.');
+      }
+    };
+
+    // Start first poll after 3 seconds
+    pollIntervalRef.current = setTimeout(poll, 3000);
+  };
 
   // Helper function to determine if file is DICOM
   const isDicomFile = (file: File | null): boolean => {
@@ -221,35 +302,8 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
         setBatchResult(result);
         
-        // Start polling for batch status
-        const pollInterval = setInterval(async () => {
-          try {
-            const status = await microserviceAPI.getBatchStatus(result.batch_id);
-            setBatchStatus(status);
-            
-            if (status.status === 'completed' || status.status === 'failed') {
-              clearInterval(pollInterval);
-              setUploadProgress({ percentage: 100, stage: 'complete' });
-              
-              if (onUploadComplete) {
-                onUploadComplete(result);
-              }
-              
-              // Redirect to batch results page
-              setTimeout(() => {
-                router.push(`/batch/${result.batch_id}`);
-              }, 2000);
-            } else {
-              setUploadProgress({ 
-                percentage: status.progress_percentage, 
-                stage: status.status === 'processing' ? 'analyzing' : 'uploading' 
-              });
-            }
-          } catch (err) {
-            clearInterval(pollInterval);
-            setError('Failed to fetch batch status');
-          }
-        }, 2000);
+        // Start optimized polling for batch status
+        startBatchStatusPolling(result.batch_id);
         
       } else {
         // Single file upload

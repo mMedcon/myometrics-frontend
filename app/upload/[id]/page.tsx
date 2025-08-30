@@ -119,7 +119,6 @@ export default function UploadDetailsPage() {
       <Navigation>
         <div className="max-w-2xl mx-auto">
           <div className="card text-center">
-            <div className="text-4xl mb-4">❌</div>
             <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>
               Failed to Load Upload
             </h1>
@@ -146,7 +145,6 @@ export default function UploadDetailsPage() {
       <Navigation>
         <div className="max-w-2xl mx-auto">
           <div className="card text-center">
-            <div className="text-4xl mb-4">🔍</div>
             <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>
               Upload Not Found
             </h1>
@@ -357,7 +355,6 @@ export default function UploadDetailsPage() {
             {upload.status === 'failed' && (
               <div className="card bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
                 <div className="flex items-center space-x-3">
-                  <span className="text-red-500 text-xl">❌</span>
                   <div>
                     <h3 className="font-medium text-red-800 dark:text-red-200">
                       Analysis Failed

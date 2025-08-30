@@ -171,7 +171,6 @@ export default function UploadHistoryPage() {
             </p>
           </div>
           <Link href="/upload" className="btn btn-primary">
-            <span className="mr-2">📤</span>
             Upload New Image
           </Link>
         </div>

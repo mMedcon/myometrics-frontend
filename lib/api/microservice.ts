@@ -347,7 +347,26 @@ class MicroserviceAPI {
       throw new Error(error.detail || 'Failed to fetch upload details');
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Transform API response to match frontend interface
+    return {
+      upload_id: data.upload_id,
+      filename: data.original_filename || data.filename,
+      status: data.status === 'processed' ? 'completed' : data.status,
+      upload_timestamp: data.upload_time || data.file_upload_time || data.upload_timestamp,
+      analysis_result: data.diagnosis ? {
+        diagnosis: data.diagnosis,
+        confidence: data.confidence_score || data.confidence || 0,
+        findings: data.findings || [],
+        recommendations: data.recommendations || []
+      } : undefined,
+      metadata: {
+        file_size: data.file_size || 0,
+        image_dimensions: data.image_dimensions || { width: 0, height: 0 },
+        file_type: data.file_type || 'unknown'
+      }
+    };
   }
 
   async getUserUploads(userId: string, limit = 50, offset = 0): Promise<UserUploadsResponse> {
@@ -371,7 +390,21 @@ class MicroserviceAPI {
       throw new Error(error.detail || 'Failed to fetch uploads');
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Transform API response to match frontend interface
+    if (data.uploads) {
+      data.uploads = data.uploads.map((upload: any) => ({
+        upload_id: upload.upload_id,
+        filename: upload.original_filename || upload.filename,
+        status: upload.status,
+        upload_timestamp: upload.upload_time || upload.file_upload_time || upload.upload_timestamp,
+        diagnosis: upload.diagnosis,
+        confidence: upload.confidence_score || upload.confidence,
+      }));
+    }
+
+    return data;
   }
 
   async getStats(): Promise<Stats> {
