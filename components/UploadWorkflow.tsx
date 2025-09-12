@@ -4,8 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api';
 
-
-
 interface UploadProgress {
   percentage: number;
   stage: 'uploading' | 'analyzing' | 'complete';
@@ -28,6 +26,37 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+  const [hidePanel, setHidePanel] = useState(false);
+
+  useEffect(() => {
+  const stored = localStorage.getItem("hidePanel");
+  if (stored !== null) {
+    setHidePanel(stored === "true");
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("hidePanel", hidePanel.toString());
+  }, [hidePanel]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("uploadProgress");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.stage) {
+          setUploadProgress(parsed);
+        }
+      } catch (e) {
+        console.error("Ошибка парсинга uploadProgress", e);
+      }
+    }
+  }, []); 
+  useEffect(() => {
+    if (uploadProgress.stage !== "uploading" || uploadProgress.percentage > 0) {
+      localStorage.setItem("uploadProgress", JSON.stringify(uploadProgress));
+    }
+  }, [uploadProgress]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -36,6 +65,18 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         clearInterval(pollIntervalRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const savedFiles = localStorage.getItem("savedFiles");
+    if (savedFiles) {
+      setSelectedFiles(JSON.parse(savedFiles)); // loading files metadata from local storage
+    }
+
+    const hidden = localStorage.getItem("hidePanel");
+    if (hidden === "true") {
+      setHidePanel(true);
+    }
   }, []);
 
   // Optimized polling with exponential backoff
@@ -65,6 +106,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
           
           if (onUploadComplete && batchResult) {
             onUploadComplete(batchResult);
+            localStorage.setItem('isPanelHidden', 'false');
           }
           
           // Redirect to batch results page
@@ -257,19 +299,33 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
       handleFileSelection(validFiles);
     }
+  }; 
+
+  const saveFilesMetadata = (files: File[]) => {
+    const metadata = files.map(file => ({
+      name: file.name,
+      size: file.size
+    }));
+    localStorage.setItem("savedFiles", JSON.stringify(metadata));
   };
 
+  useEffect(() => {
+    const saved = localStorage.getItem("savedFiles");
+    if (saved) {
+      setSelectedFiles(JSON.parse(saved)); // selectedFiles будет массив объектов {name, size}
+    }
+  }, []);
+
+
   const handleFileSelection = (files: File[]) => {
-    if (files.length === 1) {
-      // Single file upload
-      const validation = microserviceAPI.validateFile(files[0]);
-      if (!validation.valid) {
-        setError(validation.error || 'Invalid file');
-        return;
-      }
-      setIsBatchMode(false);
+  if (files.length === 1) {
+    const validation = microserviceAPI.validateFile(files[0]);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid file');
+      return;
+    }
+    setIsBatchMode(false);
     } else {
-      // Batch upload
       const validation = microserviceAPI.validateBatchFiles(files);
       if (!validation.valid) {
         setError(validation.errors.join(', '));
@@ -279,10 +335,13 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     }
 
     setSelectedFiles(files);
+    saveFilesMetadata(files);
     setError('');
     setUploadResult(null);
     setBatchResult(null);
     setBatchStatus(null);
+
+    localStorage.removeItem("analysisResult");
   };
 
   const handleUpload = async () => {
@@ -290,6 +349,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
     setIsUploading(true);
     setError('');
+    
 
     try {
       setUploadProgress({ percentage: 0, stage: 'uploading' });
@@ -328,9 +388,11 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         }
 
         // Redirect to upload details page after a brief delay
+        /*
         setTimeout(() => {
           router.push(`/upload/${result.upload_id}`);
-        }, 2000);
+        }, 7000);
+        */
       }
 
     } catch (err: any) {
@@ -348,10 +410,27 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     setBatchResult(null);
     setBatchStatus(null);
     setIsBatchMode(false);
+    localStorage.removeItem("savedFiles");
+    localStorage.removeItem("uploadProgress");
+    localStorage.setItem("hidePanel", "false");
+    setHidePanel(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("savedFiles");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSelectedFiles(parsed);
+        setHidePanel(true);
+      } catch (e) {
+        console.error("Ошибка парсинга savedFiles", e);
+      }
+    }
+}, []);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -379,11 +458,23 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         return '';
     }
   };
+  useEffect(() => {
+  const saved = localStorage.getItem("savedFiles");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      setSelectedFiles(parsed); 
+      setHidePanel(true); 
+    } catch (e) {
+      console.error("Error parsing saved files", e);
+    }
+  }
+}, []);
 
   return (
     <div className="space-y-6">
       {/* Upload Area */}
-      {selectedFiles.length === 0 ? (
+      {(selectedFiles.length === 0 ) ? (
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
             dragActive
@@ -466,7 +557,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             </button>
           </div>
           
-          {isBatchMode ? (
+          {isBatchMode && hidePanel ? (
             <div className="space-y-2 mb-4">
               <div className="flex items-center space-x-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center" 
@@ -506,7 +597,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             </div>
           )}
 
-          {!isUploading && (
+          {!isUploading &&(
             <button
               onClick={handleUpload}
               className="btn-primary w-full"
@@ -543,7 +634,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             <p className="text-sm text-muted">{getStageDescription()}</p>
           </div>
         </div>
-      )}
+      )}  
 
       {/* Analysis Progress */}
       {uploadProgress.stage === 'analyzing' && (
@@ -568,8 +659,29 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
       )}
 
       {/* Success Message */}
-      {((uploadResult && uploadProgress.stage === 'complete') || (batchResult && batchStatus?.status === 'completed')) && (
+      {(((uploadResult && uploadProgress.stage === 'complete') || (batchResult && batchStatus?.status === 'completed')) || hidePanel)  && (
         <div className="card border-green-200 dark:border-green-800">
+
+          <div className="absolute top-2 right-2">
+          <button
+            type="button"
+            onClick={() => {
+              handleUpload;
+              setHidePanel(true);
+            }}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <svg
+              className="w-4 h-4 text-gray-600 dark:text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
@@ -618,7 +730,12 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             )}
 
             <p className="text-sm text-muted">
-              Redirecting to detailed results...
+                <button
+                onClick={() => router.push('/mockupui/index.tsx')}
+                className="btn-primary w-full"
+              >
+                {'Redirect to the results page'}
+              </button>
             </p>
           </div>
         </div>
