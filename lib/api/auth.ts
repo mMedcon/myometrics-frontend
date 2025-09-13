@@ -70,7 +70,7 @@ class AuthService {
 
     return data;
   }
-
+  
   async register(userData: RegisterData): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/register/`, {
       method: 'POST',
@@ -81,12 +81,26 @@ class AuthService {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Registration failed');
+      let errorMessage = 'Registration failed';
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else {
+          // Pick the first field + message from serializer errors
+          const firstKey = Object.keys(errorData)[0];
+          if (firstKey && Array.isArray(errorData[firstKey])) {
+            errorMessage = errorData[firstKey][0];
+          }
+        }
+      } catch (e) {
+        errorMessage = `Request failed with status ${response.status}`;
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    
+
     // Store tokens in localStorage
     localStorage.setItem('access_token', data.access);
     localStorage.setItem('refresh_token', data.refresh);
