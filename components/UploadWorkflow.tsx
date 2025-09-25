@@ -10,10 +10,12 @@ interface UploadProgress {
 }
 
 interface UploadWorkflowProps {
+  detectionType: 'dmd' | 'tumor';
   onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
+  onUploadAttempt?: () => void;
 }
 
-export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps) {
+export default function UploadWorkflow({ detectionType, onUploadComplete,onUploadAttempt }: UploadWorkflowProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -346,6 +348,11 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
+
+    // Call validation from parent component
+    if (onUploadAttempt) {
+      onUploadAttempt();
+    }
 
     setIsUploading(true);
     setError('');

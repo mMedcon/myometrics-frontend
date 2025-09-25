@@ -1,10 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import UploadWorkflow from '@/components/UploadWorkflow';
 
 export default function UploadPage() {
+  const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
+  const [error, setError] = useState('');
+
+    // Function to validate detection type selection
+  const handleUploadAttempt = () => {
+    if (!selectedDetection) {
+      setError('Please select a detection type before proceeding with upload and analysis.');
+      return;
+    }
+    // Clear error if validation passes
+    setError('');
+  };
+
+  // Clear error when user makes a selection
+  const handleDetectionSelection = (type: 'dmd' | 'tumor') => {
+    setSelectedDetection(type);
+    setError(''); // Clear error when user selects a type
+  };
+
   return (
     <Navigation>
       <div className="max-w-2xl mx-auto space-y-8">
@@ -17,6 +36,85 @@ export default function UploadPage() {
             Upload a medical image for AI-powered analysis and diagnosis
           </p>
         </div>
+
+         {/* Detection Type Selection */}
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
+            Select Detection Type
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div 
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                selectedDetection === 'dmd' 
+                  ? 'border-sci-blue bg-sci-blue bg-opacity-10' 
+                  : 'border-gray-300 hover:border-sci-blue'
+              }`}
+              onClick={() => handleDetectionSelection('dmd')}
+            >
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name="detection"
+                  value="dmd"
+                  checked={selectedDetection === 'dmd'}
+                  onChange={() => handleDetectionSelection('dmd')}
+                  className="text-sci-blue"
+                />
+                <div>
+                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>DMD Detection</h3>
+                  <p className="text-sm text-muted">
+                    Duchenne Muscular Dystrophy analysis using MRI scans
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                selectedDetection === 'tumor' 
+                  ? 'border-sci-blue bg-sci-blue bg-opacity-10' 
+                  : 'border-gray-300 hover:border-sci-blue'
+              }`}
+              onClick={() => handleDetectionSelection('tumor')}
+            >
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name="detection"
+                  value="tumor"
+                  checked={selectedDetection === 'tumor'}
+                  onChange={() => handleDetectionSelection('tumor')}
+                  className="text-sci-blue"
+                />
+                <div>
+                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>Tumor Detection</h3>
+                  <p className="text-sm text-muted">
+                    Brain tumor identification and classification
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="card border-red-200 dark:border-red-800">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-200">Selection Required</h3>
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+
 
         {/* Guidelines */}
         <div className="card">
@@ -62,8 +160,13 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Upload Workflow Component */}
-        <UploadWorkflow />
+       {/* Upload Workflow Component - Only show when detection type is selected */}
+        {selectedDetection && (
+          <UploadWorkflow 
+            detectionType={selectedDetection as 'dmd' | 'tumor'} 
+            onUploadAttempt={handleUploadAttempt}
+          />
+        )}
       </div>
     </Navigation>
   );
