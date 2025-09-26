@@ -427,7 +427,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         setSelectedFiles(parsed);
         setHidePanel(true);
       } catch (e) {
-        console.error("Ошибка парсинга savedFiles", e);
+        console.error("Parsing error of savedFiles", e);
       }
     }
 }, []);

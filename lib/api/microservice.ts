@@ -200,6 +200,15 @@ export interface BatchFilesResponse {
   count: number;
 }
 
+export interface UploadFileInfo {
+  upload_id: string;
+  original_filename: string;
+  file_type: string;
+  upload_time: string;
+  storage_path: string;
+  exists: boolean;
+}
+
 class MicroserviceAPI {
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('access_token');
@@ -701,6 +710,27 @@ class MicroserviceAPI {
     }
 
     return response.json();
+  }
+
+  async getUploadFileInfo(uploadId: string): Promise<UploadFileInfo> {
+    const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/info`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch file info');
+    }
+    return response.json();
+  }
+
+  async getUploadFileBlob(uploadId: string): Promise<Blob> {
+    const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/file`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch image file');
+    }
+    return response.blob();
   }
 
   // Utility function to validate multiple files for batch upload

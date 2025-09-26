@@ -1,423 +1,823 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { microserviceAPI, UploadDetails } from '@/lib/api';
-import Navigation from '@/components/Navigation';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import "./page.css";
+import Image from "next/image";
+import mri from "mockupui/mri.jpg";
+import dixon from "mockupui/dixon.png";
 
 export default function UploadDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const uploadId = params.id as string;
-  
-  const [upload, setUpload] = useState<UploadDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isRetrying, setIsRetrying] = useState(false);
+  const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<"leg-analysis" | "dixon-imaging">("leg-analysis");
+  const [isMuscleAbbrVisible, setIsMuscleAbbrVisible] = useState(false);
+  const [isHealthyControlVisible, setIsHealthyControlVisible] = useState(false);
+  const [isDmdPatientVisible, setIsDmdPatientVisible] = useState(false);
 
+  const [isTechSpecVisible, setIsTechSpecVisible] = useState(false);
+  const [isFuncThresholdsVisible, setIsFuncThresholdsVisible] = useState(false);
+  const [isAgeProgressionVisible, setIsAgeProgressionVisible] = useState(false);
+  const [isMusclePatternVisible, setIsMusclePatternVisible] = useState(false);
+
+  const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
+  const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
+
+  const mriUploadId = "upload_001";
+  const dixonUploadId = "upload_002";
+
+  // useEffect для загрузки изображений
   useEffect(() => {
-    if (!uploadId) return;
+    if (mriUploadId) {
+      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${mriUploadId}/file`);
+    }
+    if (dixonUploadId) {
+      setDixonImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${dixonUploadId}/file`);
+    }
+  }, []);
 
-    const fetchUploadDetails = async () => {
-      try {
-        setIsLoading(true);
-        const details = await microserviceAPI.getUploadDetails(uploadId);
-        setUpload(details);
-      } catch (err: any) {
-        console.error('Failed to fetch upload details:', err);
-        setError('Failed to load upload details. Please try again.');
-      } finally {
-        setIsLoading(false);
+  // useEffect для инициализации событий и прочего
+  useEffect(() => {
+    // === Tabs ===
+    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach(button => {
+      button.addEventListener("click", function () {
+        const targetTab = this.getAttribute("data-tab");
+        document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.remove("active"));
+        this.classList.add("active");
+        if (targetTab) document.getElementById(targetTab)?.classList.add("active");
+      });
+    });
+
+    // === Hover muscle items ===
+    document.querySelectorAll<HTMLElement>(".muscle-data-item").forEach(item => {
+      item.addEventListener("mouseenter", function () {
+        this.style.background = "rgba(0, 150, 255, 0.1)";
+        this.style.borderColor = "#0096ff";
+        this.style.transform = "translateX(3px)";
+      });
+      item.addEventListener("mouseleave", function () {
+        this.style.background = "";
+        this.style.borderColor = "#2d3142";
+        this.style.transform = "";
+      });
+    });
+
+    // === Timeline ===
+    document.querySelectorAll<HTMLElement>(".timeline-point").forEach((point, index) => {
+      point.addEventListener("click", function () {
+        document.querySelectorAll(".timeline-point").forEach(p => p.classList.remove("active"));
+        this.classList.add("active");
+        document.querySelectorAll<HTMLElement>(".progression-point").forEach((prog, i) => {
+          if (i === index) {
+            prog.style.background = "rgba(0, 150, 255, 0.1)";
+            prog.style.borderColor = "#0096ff";
+          } else {
+            prog.style.background = "#1a1d29";
+            prog.style.borderColor = "#3a3f52";
+          }
+        });
+      });
+    });
+
+    // === Hover biomarkers ===
+    document.querySelectorAll<HTMLElement>(".biomarker-card").forEach(card => {
+      card.addEventListener("mouseenter", function () {
+        const label = this.querySelector(".biomarker-label")?.textContent?.toLowerCase() || "";
+        document.querySelectorAll<HTMLElement>(".findings-list li").forEach(finding => {
+          const findingText = finding.textContent?.toLowerCase() || "";
+          if ((label.includes("fat") && findingText.includes("rml")) ||
+              (label.includes("t₂") && findingText.includes("rul"))) {
+            finding.style.background = "rgba(0, 150, 255, 0.1)";
+            finding.style.borderColor = "#0096ff";
+          }
+        });
+      });
+      card.addEventListener("mouseleave", function () {
+        document.querySelectorAll<HTMLElement>(".findings-list li").forEach(finding => {
+          finding.style.background = "#1a1d29";
+          finding.style.borderColor = "#3a3f52";
+        });
+      });
+    });
+
+    // === Add Finding ===
+    const addBtn = document.querySelector<HTMLButtonElement>(".add-nodule-btn");
+    addBtn?.addEventListener("click", function () {
+      const findingsList = document.querySelector(".findings-list");
+      if (!findingsList) return;
+      const newFinding = document.createElement("li");
+      const nextId = findingsList.children.length + 1;
+      newFinding.innerHTML = `
+        <span><span className="finding-id">#NEW ${nextId}</span></span>
+        <span className="brock-score">Brock score: 1.8</span>
+      `;
+      findingsList.appendChild(newFinding);
+      const findingsCount = document.querySelector(".result-row .result-value");
+      if (findingsCount && findingsCount.textContent !== "Positive") {
+        findingsCount.textContent = String(parseInt(findingsCount.textContent || "0") + 1);
       }
+    });
+
+    // === Timestamp update ===
+    function updateTimestamp() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" });
+      const dateString = now.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
+      const scanInfo = document.querySelector(".scan-info");
+      if (scanInfo) scanInfo.textContent = `Screened by MyoMetrics • ${timeString}, ${dateString}`;
+    }
+    updateTimestamp();
+    const timer = setInterval(updateTimestamp, 60000);
+
+    // === Shortcuts ===
+    document.addEventListener("keydown", function (e) {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "n") {
+          e.preventDefault();
+          addBtn?.click();
+        } else if (e.key === "r") {
+          e.preventDefault();
+          location.reload();
+        }
+      }
+    });
+
+    // === Mobile sidebar toggle ===
+    function createMobileToggle() {
+      if (window.innerWidth <= 1200 && !document.getElementById("sidebar-toggle")) {
+        const toggleBtn = document.createElement("button");
+        toggleBtn.id = "sidebar-toggle";
+        toggleBtn.innerHTML = "📊";
+        toggleBtn.style.cssText = `
+          position: fixed; top: 20px; right: 20px;
+          background: #232633; border: 1px solid #3a3f52;
+          color: #e8eaed; padding: 10px; border-radius: 6px;
+          cursor: pointer; z-index: 1000; font-size: 16px;
+        `;
+        const sidebar = document.querySelector<HTMLElement>(".sidebar");
+        let visible = true;
+        toggleBtn.addEventListener("click", () => {
+          visible = !visible;
+          if (sidebar) sidebar.style.display = visible ? "block" : "none";
+          toggleBtn.innerHTML = visible ? "📊" : "📈";
+        });
+        document.body.appendChild(toggleBtn);
+      }
+    }
+    createMobileToggle();
+    window.addEventListener("resize", createMobileToggle);
+
+    return () => {
+      // ...очистка таймеров и обработчиков...
     };
+  }, []);
 
-    fetchUploadDetails();
-
-    // Poll for updates if still processing
-    const interval = setInterval(() => {
-      if (upload?.status === 'processing') {
-        fetchUploadDetails();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [uploadId, upload?.status]);
-
-  const handleRetryAnalysis = async () => {
-    try {
-      setIsRetrying(true);
-      const updatedUpload = await microserviceAPI.retryAnalysis(uploadId);
-      setUpload(updatedUpload);
-    } catch (err: any) {
-      setError('Failed to retry analysis. Please try again.');
-    } finally {
-      setIsRetrying(false);
-    }
+  // Стили для секций
+  const sectionCardStyle = {
+    background: "#1a1d29",
+    border: "1px solid #3a3f52",
+    borderRadius: "8px",
+    padding: "16px",
+    marginBottom: "16px",
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this upload? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await microserviceAPI.deleteUpload(uploadId);
-      router.push('/history');
-    } catch (err: any) {
-      setError('Failed to delete upload. Please try again.');
-    }
+  const sectionHeaderStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    marginBottom: "10px",
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'var(--success)';
-      case 'processing':
-        return 'var(--warning)';
-      case 'failed':
-        return 'var(--error)';
-      default:
-        return 'var(--info)';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return '✅';
-      case 'processing':
-        return '⏳';
-      case 'failed':
-        return '❌';
-      default:
-        return '📋';
-    }
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return 'var(--success)';
-    if (confidence >= 70) return 'var(--warning)';
-    return 'var(--error)';
-  };
-
-  if (isLoading) {
-    return (
-      <Navigation>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: 'var(--primary)' }}></div>
-            <p style={{ color: 'var(--muted)' }}>Loading upload details...</p>
-          </div>
-        </div>
-      </Navigation>
-    );
-  }
-
-  if (error && !upload) {
-    return (
-      <Navigation>
-        <div className="max-w-2xl mx-auto">
-          <div className="card text-center">
-            <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>
-              Failed to Load Upload
-            </h1>
-            <p className="text-muted mb-4">{error}</p>
-            <div className="space-x-4">
-              <button
-                onClick={() => window.location.reload()}
-                className="btn btn-primary"
-              >
-                Try Again
-              </button>
-              <Link href="/history" className="btn btn-outline">
-                Back to History
-              </Link>
-            </div>
-          </div>
-        </div>
-      </Navigation>
-    );
-  }
-
-  if (!upload) {
-    return (
-      <Navigation>
-        <div className="max-w-2xl mx-auto">
-          <div className="card text-center">
-            <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>
-              Upload Not Found
-            </h1>
-            <p className="text-muted mb-4">
-              The upload you're looking for doesn't exist or you don't have permission to view it.
-            </p>
-            <Link href="/history" className="btn btn-primary">
-              Back to History
-            </Link>
-          </div>
-        </div>
-      </Navigation>
-    );
-  }
 
   return (
-    <Navigation>
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <Link href="/history" className="text-sm hover:underline mb-2 block" style={{ color: 'var(--primary)' }}>
-              ← Back to History
-            </Link>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>
-              Upload Details
-            </h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            {upload.status === 'failed' && (
-              <button
-                onClick={handleRetryAnalysis}
-                disabled={isRetrying}
-                className="btn btn-accent"
-              >
-                {isRetrying ? 'Retrying...' : 'Retry Analysis'}
-              </button>
-            )}
-            <button
-              onClick={handleDelete}
-              className="btn bg-red-500 hover:bg-red-600 text-white"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
+    <div className="dashboard-container">
+      <div className="main-content">
+        <div className="header">
+          <h1>DMD Monitor</h1>
+          <div className="subtitle">AI-Powered MRI Analysis for Duchenne Muscular Dystrophy</div>
 
-        {error && (
-          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
-            <div className="card">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-                Basic Information
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted">Filename</label>
-                  <p className="text-sm" style={{ color: 'var(--text)' }}>{upload.filename}</p>
+          {/* Кнопка раскрытия анализов */}
+          <button
+            onClick={() => setIsAnalysisVisible(v => !v)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 18,
+              margin: "18px 0 10px 0",
+              display: "flex",
+              alignItems: "center",
+              color: "var(--primary)",
+              fontWeight: 600
+            }}
+            aria-label={isAnalysisVisible ? "Hide Analyses" : "Show Analyses"}
+          >
+            <span style={{
+              display: "inline-block",
+              transition: "transform 0.2s",
+              transform: isAnalysisVisible ? "rotate(90deg)" : "rotate(0deg)"
+            }}>▶</span>
+            <span style={{ marginLeft: 8 }}>
+              {isAnalysisVisible ? "Hide Analyses" : "Show Analyses"}
+            </span>
+          </button>
+          {isAnalysisVisible && (
+            <>
+              <div className="patient-info-grid">
+                <div className="patient-info-card">
+                  <div className="label">Patient ID</div>
+                  <div className="value">DMD-2024-0847</div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted">Upload ID</label>
-                  <p className="text-sm font-mono" style={{ color: 'var(--text)' }}>{upload.upload_id}</p>
+                <div className="patient-info-card">
+                  <div className="label">Age / Sex</div>
+                  <div className="value">12Y / M</div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted">Upload Time</label>
-                  <p className="text-sm" style={{ color: 'var(--text)' }}>
-                    {new Date(upload.upload_timestamp).toLocaleString()}
-                  </p>
+                <div className="patient-info-card">
+                  <div className="label">Ambulatory Status</div>
+                  <div className="value">Late Ambulatory</div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted">Status</label>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">{getStatusIcon(upload.status)}</span>
-                    <span
-                      className="text-sm font-medium px-2 py-1 rounded-full"
-                      style={{
-                        color: getStatusColor(upload.status),
-                        backgroundColor: `${getStatusColor(upload.status)}20`,
-                      }}
-                    >
-                      {upload.status}
-                    </span>
-                  </div>
+                <div className="patient-info-card">
+                  <div className="label">Steroid Treatment</div>
+                  <div className="value">Deflazacort</div>
+                </div>
+                <div className="patient-info-card">
+                  <div className="label">Last Scan</div>
+                  <div className="value">2024-05-15</div>
+                </div>
+                <div className="patient-info-card">
+                  <div className="label">NSAA Score</div>
+                  <div className="value">18/34</div>
                 </div>
               </div>
-            </div>
 
-            {/* File Metadata */}
-            {upload.metadata && (
-              <div className="card">
-                <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-                  File Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted">File Size</label>
-                    <p className="text-sm" style={{ color: 'var(--text)' }}>
-                      {(upload.metadata.file_size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted">Dimensions</label>
-                    <p className="text-sm" style={{ color: 'var(--text)' }}>
-                      {upload.metadata.image_dimensions.width} × {upload.metadata.image_dimensions.height}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted">File Type</label>
-                    <p className="text-sm" style={{ color: 'var(--text)' }}>{upload.metadata.file_type}</p>
-                  </div>
+              <div className="biomarkers-grid">
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-moderate">42%</div>
+                  <div className="biomarker-label">Fat Fraction</div>
+                  <div className="biomarker-status status-moderate">Moderate</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-severe">58ms</div>
+                  <div className="biomarker-label">T₂ Relaxation</div>
+                  <div className="biomarker-status status-severe">Elevated</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-mild">347cm²</div>
+                  <div className="biomarker-label">Muscle Volume</div>
+                  <div className="biomarker-status status-mild">Reduced</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-mild">3.2</div>
+                  <div className="biomarker-label">Edema Score</div>
+                  <div className="biomarker-status status-mild">Mild</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-normal">8%</div>
+                  <div className="biomarker-label">Asymmetry Index</div>
+                  <div className="biomarker-status status-normal">Normal</div>
                 </div>
               </div>
-            )}
 
-            {/* Analysis Results */}
-            {upload.analysis_result && (
-              <div className="card">
-                <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-                  Analysis Results
-                </h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted">Diagnosis</label>
-                      <p className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
-                        {upload.analysis_result.diagnosis}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted">Confidence</label>
-                      <div className="flex items-center space-x-2">
-                        <p
-                          className="text-lg font-semibold"
-                          style={{ color: getConfidenceColor(upload.analysis_result.confidence) }}
-                        >
-                          {upload.analysis_result.confidence}%
-                        </p>
-                        <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              backgroundColor: getConfidenceColor(upload.analysis_result.confidence),
-                              width: `${upload.analysis_result.confidence}%`,
-                            }}
-                          />
+              <div className="tab-navigation" style={{ marginBottom: "25px" }}>
+                <button
+                  className={`tab-btn${activeTab === "leg-analysis" ? " active" : ""}`}
+                  onClick={() => setActiveTab("leg-analysis")}
+                  data-tab="leg-analysis"
+                >
+                  Lower Leg Analysis
+                </button>
+                <button
+                  className={`tab-btn${activeTab === "dixon-imaging" ? " active" : ""}`}
+                  onClick={() => setActiveTab("dixon-imaging")}
+                  data-tab="dixon-imaging"
+                >
+                  Dixon Imaging Study
+                </button>
+              </div>
+
+              <div className="tab-content">
+                {activeTab === "leg-analysis" && (
+                  <div className="tab-panel active" id="leg-analysis">
+                    <div className="mri-viewer">
+                      <div className="mri-header">
+                        <div className="mri-title">Lower Leg MRI Analysis</div>
+                        <div className="scan-info">Screened by MyoMetrics • 07:12 pm, 05/02/22</div>
+                      </div>
+                      <div className="mri-display">
+                        <div className="mri-image-container">
+                          {mriImageUrl ? (
+                            <img
+                              src={mriImageUrl}
+                              alt="MRI Scan"
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                borderRadius: "8px",
+                                border: "1px solid #3a3f52",
+                              }}
+                            />
+                          ) : (
+                            <div style={{ color: "#9aa0a6", fontSize: 14 }}>MRI image not available</div>
+                          )}
+                        </div>
+                        <div className="comparison-data">
+                          {/* Muscle Abbreviations */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsMuscleAbbrVisible(v => !v)}
+                              aria-label={isMuscleAbbrVisible ? "Скрыть" : "Показать"}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Muscle Abbreviations</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isMuscleAbbrVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isMuscleAbbrVisible && (
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11px" }}>
+                                <div style={{ color: "#9aa0a6" }}>TA = Tibialis Anterior</div>
+                                <div style={{ color: "#9aa0a6" }}>TP = Tibialis Posterior</div>
+                                <div style={{ color: "#9aa0a6" }}>Fib = Fibularis</div>
+                                <div style={{ color: "#9aa0a6" }}>Sol = Soleus</div>
+                                <div style={{ color: "#9aa0a6" }}>MG = Medial Gastrocnemius</div>
+                                <div style={{ color: "#9aa0a6" }}>LG = Lateral Gastrocnemius</div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Healthy Control */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsHealthyControlVisible(v => !v)}
+                              aria-label={isHealthyControlVisible ? "Скрыть" : "Показать"}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Healthy Control</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isHealthyControlVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isHealthyControlVisible && (
+                              <div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px", gap: "8px", padding: "6px 0", borderBottom: "1px solid #3a3f52", fontSize: "10px", color: "#9aa0a6", fontWeight: 600 }}>
+                                  <div>Muscle</div>
+                                  <div style={{ textAlign: "center" }}>Fat %</div>
+                                  <div style={{ textAlign: "center" }}>T₂ Time</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Tibialis Anterior</div>
+                                  <div className="metric-value value-normal">12%</div>
+                                  <div className="metric-value value-normal">30ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Tibialis Posterior</div>
+                                  <div className="metric-value value-normal">15%</div>
+                                  <div className="metric-value value-normal">32ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Fibularis</div>
+                                  <div className="metric-value value-normal">10%</div>
+                                  <div className="metric-value value-normal">29ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Soleus</div>
+                                  <div className="metric-value value-normal">18%</div>
+                                  <div className="metric-value value-normal">33ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Gastrocnemius</div>
+                                  <div className="metric-value value-normal">17%</div>
+                                  <div className="metric-value value-normal">34ms</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* DMD Patient */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsDmdPatientVisible(v => !v)}
+                              aria-label={isDmdPatientVisible ? "Скрыть" : "Показать"}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>DMD Patient</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isDmdPatientVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isDmdPatientVisible && (
+                              <div>
+                                <div style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr 60px 60px",
+                                  gap: "8px",
+                                  padding: "6px 0",
+                                  borderBottom: "1px solid #3a3f52",
+                                  fontSize: "10px",
+                                  color: "#9aa0a6",
+                                  fontWeight: 600
+                                }}>
+                                  <div>Muscle</div>
+                                  <div style={{ textAlign: "center" }}>Fat %</div>
+                                  <div style={{ textAlign: "center" }}>T₂ Time</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Tibialis Anterior</div>
+                                  <div className="metric-value value-moderate">45%</div>
+                                  <div className="metric-value value-severe">58ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Tibialis Posterior</div>
+                                  <div className="metric-value value-mild">32%</div>
+                                  <div className="metric-value value-moderate">48ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Fibularis</div>
+                                  <div className="metric-value value-severe">68%</div>
+                                  <div className="metric-value value-severe">72ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Soleus</div>
+                                  <div className="metric-value value-moderate">55%</div>
+                                  <div className="metric-value value-severe">65ms</div>
+                                </div>
+                                <div className="muscle-data-item">
+                                  <div className="muscle-name">Gastrocnemius</div>
+                                  <div className="metric-value value-severe">71%</div>
+                                  <div className="metric-value value-severe">77ms</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {upload.analysis_result.findings?.length > 0 && (
-                    <div>
-                      <label className="text-sm font-medium text-muted">Key Findings</label>
-                      <ul className="mt-2 space-y-1">
-                        {upload.analysis_result.findings.map((finding, index) => (
-                          <li key={index} className="text-sm flex items-start space-x-2">
-                            <span className="text-blue-500 mt-0.5">•</span>
-                            <span style={{ color: 'var(--text)' }}>{finding}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {upload.analysis_result.recommendations?.length > 0 && (
-                    <div>
-                      <label className="text-sm font-medium text-muted">Recommendations</label>
-                      <ul className="mt-2 space-y-1">
-                        {upload.analysis_result.recommendations.map((recommendation, index) => (
-                          <li key={index} className="text-sm flex items-start space-x-2">
-                            <span className="text-green-500 mt-0.5">•</span>
-                            <span style={{ color: 'var(--text)' }}>{recommendation}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Processing Status */}
-            {upload.status === 'processing' && (
-              <div className="card bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 border-2 border-t-transparent border-yellow-500 rounded-full animate-spin"></div>
-                  <div>
-                    <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
-                      Analysis in Progress
-                    </h3>
-                    <p className="text-sm text-yellow-600 dark:text-yellow-300 mt-1">
-                      Your image is currently being analyzed by our AI system. This usually takes 1-3 minutes.
-                      This page will automatically update when the analysis is complete.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Failed Status */}
-            {upload.status === 'failed' && (
-              <div className="card bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
-                <div className="flex items-center space-x-3">
-                  <div>
-                    <h3 className="font-medium text-red-800 dark:text-red-200">
-                      Analysis Failed
-                    </h3>
-                    <p className="text-sm text-red-600 dark:text-red-300 mt-1">
-                      The analysis of your image could not be completed. This might be due to image quality
-                      or technical issues. You can try uploading the image again or contact support.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div className="card">
-              <h3 className="font-semibold mb-3" style={{ color: 'var(--text)' }}>Quick Actions</h3>
-              <div className="space-y-2">
-                <Link href="/upload" className="btn btn-primary w-full">
-                  Upload New Image
-                </Link>
-                <Link href="/history" className="btn btn-outline w-full">
-                  View All Uploads
-                </Link>
-                {upload.analysis_result && (
-                  <button
-                    onClick={() => window.print()}
-                    className="btn btn-outline w-full"
-                  >
-                    Print Report
-                  </button>
                 )}
+                {activeTab === "dixon-imaging" && (
+                  <div className="tab-panel active" id="dixon-imaging">
+                    <div className="mri-viewer">
+                      <div className="mri-header">
+                        <div className="mri-title">Dixon Imaging Study - Thigh Cross-Section</div>
+                        <div className="scan-info">Comparative Analysis • MyoMetrics</div>
+                      </div>
+                      <div className="dixon-study-container">
+                        <div className="dixon-figure-container">
+                          <div className="figure-header">
+                            <h4>Figure 2: Dixon MRI Imaging Comparison</h4>
+                            <div className="figure-caption">Control (9y) vs DMD (10y) - Thigh Cross-Sectional Analysis</div>
+                          </div>
+                          <div className="figure-image-wrapper">
+                            {dixonImageUrl ? (
+                              <img
+                                src={dixonImageUrl}
+                                alt="DIXON Scan"
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  borderRadius: "8px",
+                                  border: "1px solid #3a3f52",
+                                }}
+                              />
+                            ) : (
+                              <div style={{ color: "#9aa0a6", fontSize: 14 }}>Dixon image not available</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="dixon-data-panel">
+                          {/* Technical Specifications */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsTechSpecVisible(v => !v)}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Technical Specifications</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isTechSpecVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isTechSpecVisible && (
+                              <div className="info-grid">
+                                <div className="info-item">
+                                  <div className="info-label">Dixon Imaging</div>
+                                  <div className="info-value">Chemical shift-encoded MRI separating water/fat signals</div>
+                                </div>
+                                <div className="info-item">
+                                  <div className="info-label">Fat Fraction</div>
+                                  <div className="info-value">Quantitative % intramuscular fat</div>
+                                </div>
+                                <div className="info-item">
+                                  <div className="info-label">T₂ Values</div>
+                                  <div className="info-value">Normal: 30-35ms | Affected: 35-80ms</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Functional Correlation Thresholds */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsFuncThresholdsVisible(v => !v)}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Functional Correlation Thresholds</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isFuncThresholdsVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isFuncThresholdsVisible && (
+                              <div className="threshold-grid">
+                                <div className="threshold-item">
+                                  <div className="threshold-value value-normal">~10%</div>
+                                  <div className="threshold-label">Running with flight phase (VL fat)</div>
+                                </div>
+                                <div className="threshold-item">
+                                  <div className="threshold-value value-mild">~20%</div>
+                                  <div className="threshold-label">Running without flight phase (VL fat)</div>
+                                </div>
+                                <div className="threshold-item">
+                                  <div className="threshold-value value-moderate">~40%</div>
+                                  <div className="threshold-label">Loss of ambulation begins (quadriceps)</div>
+                                </div>
+                                <div className="threshold-item">
+                                  <div className="threshold-value value-severe">~70%</div>
+                                  <div className="threshold-label">Walking with compensation (quadriceps)</div>
+                                </div>
+                                <div className="threshold-item">
+                                  <div className="threshold-value value-severe">{'>'}75%</div>
+                                  <div className="threshold-label">Loss of floor rise (gluteus maximus)</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Age-Related Progression */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsAgeProgressionVisible(v => !v)}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Age-Related Progression</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isAgeProgressionVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isAgeProgressionVisible && (
+                              <div className="progression-timeline">
+                                <div className="progression-item">
+                                  <div className="age-marker">1-2y</div>
+                                  <div className="progression-desc">13/14 children show gluteus maximus infiltration</div>
+                                </div>
+                                <div className="progression-item">
+                                  <div className="age-marker">3-4y</div>
+                                  <div className="progression-desc">Biceps femoris fat infiltration onset</div>
+                                </div>
+                                <div className="progression-item">
+                                  <div className="age-marker">5-6y</div>
+                                  <div className="progression-desc">Vastus lateralis involvement in most boys</div>
+                                </div>
+                                <div className="progression-item">
+                                  <div className="age-marker">9-10y</div>
+                                  <div className="progression-desc">{'>90% have >60% gluteus maximus replacement'}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Muscle Involvement Patterns */}
+                          <div style={sectionCardStyle}>
+                            <div
+                              style={sectionHeaderStyle}
+                              onClick={() => setIsMusclePatternVisible(v => !v)}
+                            >
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Muscle Involvement Patterns</span>
+                              <span style={{
+                                fontSize: 18,
+                                color: "#9aa0a6",
+                                transition: "transform 0.2s",
+                                display: "inline-block",
+                                transform: isMusclePatternVisible ? "rotate(90deg)" : "rotate(0deg)"
+                              }}>▶</span>
+                            </div>
+                            {isMusclePatternVisible && (
+                              <div className="muscle-pattern-grid">
+                                <div className="pattern-category">
+                                  <div className="pattern-header" style={{ color: "#f44336" }}>Most Affected</div>
+                                  <div className="pattern-muscles">Rectus femoris, Vastus muscles, Biceps femoris</div>
+                                </div>
+                                <div className="pattern-category">
+                                  <div className="pattern-header" style={{ color: "#ff9800" }}>Moderately Affected</div>
+                                  <div className="pattern-muscles">Adductor group, Semimembranosus</div>
+                                </div>
+                                <div className="pattern-category">
+                                  <div className="pattern-header" style={{ color: "#4caf50" }}>Relatively Spared</div>
+                                  <div className="pattern-muscles">Sartorius, Gracilis, Semitendinosus</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="timeline-section">
+                <h3 style={{ color: "#0b0c0eff", fontSize: 16, fontWeight: 600, marginBottom: 15 }}>Disease Progression Timeline</h3>
+                <div className="timeline">
+                  <div className="timeline-point">
+                    <span className="timeline-label">Baseline</span>
+                  </div>
+                  <div className="timeline-point">
+                    <span className="timeline-label">6 months</span>
+                  </div>
+                  <div className="timeline-point">
+                    <span className="timeline-label">12 months</span>
+                  </div>
+                  <div className="timeline-point active">
+                    <span className="timeline-label">18 months</span>
+                  </div>
+                  <div className="timeline-point">
+                    <span className="timeline-label">24 months</span>
+                  </div>
+                </div>
+                <div className="progression-data">
+                  <div className="progression-point">
+                    <div className="progression-value value-normal">15%</div>
+                    <div className="progression-label">Fat Fraction</div>
+                  </div>
+                  <div className="progression-point">
+                    <div className="progression-value value-mild">22%</div>
+                    <div className="progression-label">Fat Fraction</div>
+                  </div>
+                  <div className="progression-point">
+                    <div className="progression-value value-moderate">31%</div>
+                    <div className="progression-label">Fat Fraction</div>
+                  </div>
+                  <div className="progression-point">
+                    <div className="progression-value value-severe">42%</div>
+                    <div className="progression-label">Current</div>
+                  </div>
+                  <div className="progression-point">
+                    <div className="progression-value value-severe">55%</div>
+                    <div className="progression-label">Predicted</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ai-insights">
+                <h3>🤖 AI Clinical Insights</h3>
+                <div className="insight-item">
+                  <div className="insight-header">Critical Finding</div>
+                  <div className="insight-text">Gastrocnemius muscles show severe fatty infiltration ({'>'}65%) with high T2 values indicating ongoing inflammation. Immediate therapeutic intervention recommended.</div>
+                </div>
+                <div className="insight-item">
+                  <div className="insight-header">Pattern Analysis</div>
+                  <div className="insight-text">Distal-to-proximal progression pattern observed. Tibialis posterior showing relative preservation - potential compensatory mechanism detected.</div>
+                </div>
+                <div className="insight-item">
+                  <div className="insight-header">Comparative Analysis</div>
+                  <div className="insight-text">Patient's progression rate is 1.5x faster than cohort average. Consider escalating treatment protocol or clinical trial enrollment.</div>
+                </div>
+                <div className="insight-item">
+                  <div className="insight-header">Therapeutic Target</div>
+                  <div className="insight-text">Fibularis and soleus muscles in critical transition phase. Targeted physiotherapy and emerging therapies may preserve function.</div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Если анализы скрыты, показываем заглушку */}
+          {!isAnalysisVisible && (
+            <div style={{
+              background: "#232633",
+              border: "1px solid #3a3f52",
+              borderRadius: "8px",
+              padding: "24px",
+              color: "#9aa0a6",
+              textAlign: "center",
+              marginBottom: "20px"
+            }}>
+              Tap "Show Analyses" to view patient biomarkers and clinical data.
+            </div>
+          )}
+
+          <div className="sidebar">
+            <div className="sidebar-section">
+              <div className="sidebar-header">
+                <span className="sidebar-title">Patient</span>
+                <span style={{ color: "#9aa0a6", fontSize: "11px" }}>Age: 12Y</span>
+              </div>
+              <div style={{ color: "#9aa0a6", fontSize: "11px", marginBottom: "15px" }}>
+                Duchenne Muscular Dystrophy • Late Ambulatory
               </div>
             </div>
 
-            {/* Confidence Interpretation */}
-            {upload.analysis_result && (
-              <div className="card">
-                <h3 className="font-semibold mb-3" style={{ color: 'var(--text)' }}>Confidence Guide</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span style={{ color: 'var(--text)' }}>90-100%: High confidence</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <span style={{ color: 'var(--text)' }}>70-89%: Moderate confidence</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span style={{ color: 'var(--text)' }}>Below 70%: Low confidence</span>
-                  </div>
-                </div>
-                <p className="text-xs text-muted mt-3">
-                  AI analysis should always be validated by qualified medical professionals.
-                </p>
+            <div className="study-result">
+              <div className="result-row">
+                <span className="result-label">Study result</span>
+                <span className="result-value result-positive">Positive</span>
               </div>
-            )}
+              <div className="result-row">
+                <span className="result-label">Findings</span>
+                <span className="result-value">4</span>
+              </div>
+            </div>
+
+            <button className="add-nodule-btn">+ Add Finding</button>
+
+            <div className="guideline-section">
+              <div style={{ color: "#9aa0a6", fontSize: "11px", marginBottom: "8px" }}>Fleischner Society guideline recommendation</div>
+              <div className="guideline-text">
+                MRI at 6-12 months to confirm persistence, then every 2 yrs until 5 yrs.
+              </div>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Muscle Analysis</div>
+              <ul className="findings-list">
+                <li>
+                  <span><span className="finding-id">#RML 1</span></span>
+                  <span className="brock-score">Brock score: 4.1</span>
+                </li>
+                <li>
+                  <span><span className="finding-id">#RUL 2</span></span>
+                  <span className="brock-score">Brock score: 4.0</span>
+                </li>
+                <li>
+                  <span><span className="finding-id">#RUL 3</span></span>
+                  <span className="brock-score">Brock score: 2.3</span>
+                </li>
+                <li>
+                  <span><span className="finding-id">#RML 4</span></span>
+                  <span className="brock-score">Brock score: 2.3</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title" style={{ marginBottom: "10px" }}>AI Predictions</div>
+              <div className="study-result">
+                <div className="result-row">
+                  <span className="result-label">Ambulation Loss</span>
+                  <span className="result-value" style={{ color: "#ff9800" }}>18 months</span>
+                </div>
+                <div className="result-row">
+                  <span className="result-label">Model Confidence</span>
+                  <span className="result-value">85%</span>
+                </div>
+                <div className="result-row">
+                  <span className="result-label">6MO Fat Increase</span>
+                  <span className="result-value" style={{ color: "#ff9800" }}>+15%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Other Findings</div>
+              <div style={{ color: "#9aa0a6", fontSize: "11px", lineHeight: 1.4 }}>
+                Bilateral symmetric muscle involvement with distal-to-proximal progression pattern. Preserved diaphragmatic function noted.
+              </div>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Recommendations</div>
+              <div style={{ background: "#1a1d29", border: "1px solid #3f3f52", borderRadius: "6px", padding: "10px" }}>
+                <div style={{ color: "#ff9800", fontSize: "11px", fontWeight: 600, marginBottom: "6px" }}>Priority Actions</div>
+                <div style={{ color: "#e8eaed", fontSize: "11px", lineHeight: 1.4, marginBottom: "8px" }}>
+                  • Increase monitoring frequency to 3 months<br />
+                  • Consider therapeutic intervention for VL/RF<br />
+                  • Evaluate for clinical trial eligibility
+                </div>
+                <div style={{ color: "#9aa0a6", fontSize: "10px" }}>
+                  Next scan recommended: 08/15/2024
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </Navigation>
+    </div>
   );
 }
