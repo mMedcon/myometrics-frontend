@@ -21,8 +21,8 @@ export default function UploadDetailsPage() {
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
   const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
 
-  const mriUploadId = "upload_001";
-  const dixonUploadId = "upload_002";
+  const mriUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
+  const dixonUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
 
   // useEffect для загрузки изображений
   useEffect(() => {
