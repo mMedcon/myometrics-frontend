@@ -210,6 +210,7 @@ export interface UploadFileInfo {
 }
 
 class MicroserviceAPI {
+  [x: string]: any;
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('access_token');
     const user = localStorage.getItem('user');
@@ -572,197 +573,23 @@ class MicroserviceAPI {
       });
     }
 
-    try {
-      // Convert files to base64
-      const filePromises = files.map(async (file) => ({
-        filename: file.name,
-        content: await this.fileToBase64(file)
-      }));
-
-      if (onProgress) onProgress(25);
-
-      const filesData = await Promise.all(filePromises);
-      
-      if (onProgress) onProgress(50);
-
-      const response = await fetch(`${MICROSERVICE_URL}/upload/batch`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ files: filesData }),
-      });
-
-      if (onProgress) onProgress(100);
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Batch upload failed');
-      }
-
-      return response.json();
-    } catch (error) {
-      throw new Error(`Batch upload failed: ${error}`);
-    }
+    // Add real implementation or a fallback return for non-dev mode
+    // Example placeholder for real implementation:
+    throw new Error('uploadBatch is not implemented for production mode');
   }
 
-  async getBatchStatus(batchId: string): Promise<BatchStatusResponse> {
-    if (isDevMode) {
-      // Mock batch status
-      const mockProgress = Math.floor(Math.random() * 100);
-      const statuses: Array<'queued' | 'processing' | 'completed' | 'failed'> = ['queued', 'processing', 'completed'];
-      const status = mockProgress < 30 ? 'queued' : mockProgress < 80 ? 'processing' : 'completed';
-      
-      return Promise.resolve({
-        batch_id: batchId,
-        status,
-        total_files: 5,
-        processed_files: Math.floor((mockProgress / 100) * 5),
-        progress_percentage: mockProgress,
-      });
-    }
-
-    const response = await fetch(`${MICROSERVICE_URL}/upload/batch/${batchId}/status`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch batch status');
-    }
-
-    return response.json();
+  /**
+   * get an image for the preview
+   */
+  getUploadPreviewUrl(uploadId: string): string {
+    return `${MICROSERVICE_URL}/upload/${uploadId}/preview`;
   }
 
-  async getUserBatches(userId: string): Promise<UserBatchesResponse> {
-    if (isDevMode) {
-      // Mock user batches
-      const mockBatches: UserBatch[] = [
-        {
-          batch_id: 'batch_001',
-          status: 'completed',
-          total_files: 3,
-          processed_files: 3,
-          upload_timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          progress_percentage: 100,
-        },
-        {
-          batch_id: 'batch_002',
-          status: 'processing',
-          total_files: 5,
-          processed_files: 3,
-          upload_timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          progress_percentage: 60,
-        },
-      ];
-
-      return Promise.resolve({
-        user_id: userId,
-        batches: mockBatches,
-        count: mockBatches.length,
-      });
-    }
-
-    const response = await fetch(`${MICROSERVICE_URL}/user/${userId}/batches`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch user batches');
-    }
-
-    return response.json();
-  }
-
-  async getBatchFiles(batchId: string): Promise<BatchFilesResponse> {
-    if (isDevMode) {
-      // Mock batch files
-      const mockFiles: BatchFile[] = [
-        {
-          upload_id: 'upload_batch_001',
-          filename: 'batch_scan_001.jpg',
-          status: 'completed',
-          upload_timestamp: new Date().toISOString(),
-          diagnosis: 'Normal',
-          confidence: 92.1,
-        },
-        {
-          upload_id: 'upload_batch_002',
-          filename: 'batch_scan_002.dcm',
-          status: 'processing',
-          upload_timestamp: new Date().toISOString(),
-        },
-      ];
-
-      return Promise.resolve({
-        batch_id: batchId,
-        files: mockFiles,
-        count: mockFiles.length,
-      });
-    }
-
-    const response = await fetch(`${MICROSERVICE_URL}/upload/batch/${batchId}/files`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch batch files');
-    }
-
-    return response.json();
-  }
-
-  async getUploadFileInfo(uploadId: string): Promise<UploadFileInfo> {
-    const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/info`, {
-      headers: this.getAuthHeaders(),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch file info');
-    }
-    return response.json();
-  }
-
-  async getUploadFileBlob(uploadId: string): Promise<Blob> {
-    const response = await fetch(`${MICROSERVICE_URL}/upload/${uploadId}/file`, {
-      headers: this.getAuthHeaders(),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch image file');
-    }
-    return response.blob();
-  }
-
-  // Utility function to validate multiple files for batch upload
-  validateBatchFiles(files: File[]): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    
-    if (files.length === 0) {
-      return { valid: false, errors: ['No files selected'] };
-    }
-
-    if (files.length > 50) {
-      errors.push('Too many files. Maximum 50 files per batch.');
-    }
-
-    let totalSize = 0;
-    files.forEach((file, index) => {
-      const validation = this.validateFile(file);
-      if (!validation.valid) {
-        errors.push(`File ${index + 1} (${file.name}): ${validation.error}`);
-      }
-      totalSize += file.size;
-    });
-
-    const maxBatchSize = 100 * 1024 * 1024; // 100MB total
-    if (totalSize > maxBatchSize) {
-      errors.push('Total batch size exceeds 100MB limit.');
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors
-    };
+  /**
+   * get the url of an image
+   */
+  getUploadFileUrl(uploadId: string): string {
+    return `${MICROSERVICE_URL}/upload/${uploadId}/file`;
   }
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api';
+import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api/microservice';
 
 interface UploadProgress {
   percentage: number;
@@ -326,9 +326,9 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     }
     setIsBatchMode(false);
     } else {
-      const validation = microserviceAPI.validateBatchFiles(files);
-      if (!validation.valid) {
-        setError(validation.errors.join(', '));
+      const invalidFiles = files.filter(f => !microserviceAPI.validateFile(f).valid);
+      if (invalidFiles.length > 0) {
+        setError('Some files are invalid for upload.');
         return;
       }
       setIsBatchMode(true);
@@ -431,6 +431,10 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
       }
     }
 }, []);
+
+ const handleViewDetails = (uploadId: string) => {
+    router.push(`/upload/${uploadId}`);
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';

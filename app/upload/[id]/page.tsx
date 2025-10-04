@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./page.css";
 import Image from "next/image";
-import mri from "mockupui/mri.jpg";
-import dixon from "mockupui/dixon.png";
+import { microserviceAPI } from "@/lib/api/microservice";
+import { useParams } from "next/navigation";
+import { ReactSketchCanvas, ReactSketchCanvasRef } from "react-sketch-canvas";
 
 export default function UploadDetailsPage() {
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
@@ -12,29 +13,34 @@ export default function UploadDetailsPage() {
   const [isMuscleAbbrVisible, setIsMuscleAbbrVisible] = useState(false);
   const [isHealthyControlVisible, setIsHealthyControlVisible] = useState(false);
   const [isDmdPatientVisible, setIsDmdPatientVisible] = useState(false);
+  const [isFatFractionVisible, setIsFatFractionVisible] = useState(false);
 
   const [isTechSpecVisible, setIsTechSpecVisible] = useState(false);
   const [isFuncThresholdsVisible, setIsFuncThresholdsVisible] = useState(false);
   const [isAgeProgressionVisible, setIsAgeProgressionVisible] = useState(false);
   const [isMusclePatternVisible, setIsMusclePatternVisible] = useState(false);
+  
 
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
   const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
 
+  const params = useParams();
+  const uploadId = params.id as string;
+
   const mriUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
   const dixonUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
 
-  // useEffect для загрузки изображений
+  // useEffect for fetching images
   useEffect(() => {
     if (mriUploadId) {
-      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${mriUploadId}/file`);
+      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
     }
     if (dixonUploadId) {
-      setDixonImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${dixonUploadId}/file`);
+      setDixonImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
     }
   }, []);
 
-  // useEffect для инициализации событий и прочего
+  // useEffect for interactive features
   useEffect(() => {
     // === Tabs ===
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach(button => {
@@ -167,11 +173,11 @@ export default function UploadDetailsPage() {
     window.addEventListener("resize", createMobileToggle);
 
     return () => {
-      // ...очистка таймеров и обработчиков...
+      // clearing the timers
     };
   }, []);
 
-  // Стили для секций
+  // Сsections styles
   const sectionCardStyle = {
     background: "#1a1d29",
     border: "1px solid #3a3f52",
@@ -188,6 +194,20 @@ export default function UploadDetailsPage() {
     marginBottom: "10px",
   };
 
+  const [activeTimelineIndex, setActiveTimelineIndex] = useState(3);
+
+  const progressionData = [
+    { value: "15%", label: "Fat Fraction", severity: "normal" },
+    { value: "22%", label: "Fat Fraction", severity: "mild" },
+    { value: "31%", label: "Fat Fraction", severity: "moderate" },
+    { value: "42%", label: "Current", severity: "severe" },
+    { value: "55%", label: "Predicted", severity: "severe" },
+  ];
+
+  const canvasRef = useRef<ReactSketchCanvasRef>(null);
+  const [showCanvas, setShowCanvas] = useState(false);
+  const [imgDims, setImgDims] = useState<{ width: number; height: number } | null>(null);
+
   return (
     <div className="dashboard-container">
       <div className="main-content">
@@ -195,7 +215,7 @@ export default function UploadDetailsPage() {
           <h1>DMD Monitor</h1>
           <div className="subtitle">AI-Powered MRI Analysis for Duchenne Muscular Dystrophy</div>
 
-          {/* Кнопка раскрытия анализов */}
+          {/* unhide buutton */}
           <button
             onClick={() => setIsAnalysisVisible(v => !v)}
             style={{
@@ -303,20 +323,74 @@ export default function UploadDetailsPage() {
                         <div className="scan-info">Screened by MyoMetrics • 07:12 pm, 05/02/22</div>
                       </div>
                       <div className="mri-display">
-                        <div className="mri-image-container">
-                          {mriImageUrl ? (
-                            <img
-                              src={mriImageUrl}
-                              alt="MRI Scan"
-                              style={{
-                                width: "100%",
-                                height: "auto",
-                                borderRadius: "8px",
-                                border: "1px solid #3a3f52",
-                              }}
-                            />
-                          ) : (
-                            <div style={{ color: "#9aa0a6", fontSize: 14 }}>MRI image not available</div>
+                        <div className="mri-image-container" style={{ position: "relative" }}>
+                          {mriImageUrl && (
+                            <>
+                              <img
+                                src={mriImageUrl}
+                                alt="MRI Scan"
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  borderRadius: "8px",
+                                  border: "1px solid #3a3f52",
+                                  display: showCanvas ? "none" : "block"
+                                }}
+                                onLoad={e => {
+                                  const img = e.currentTarget;
+                                  setImgDims({ width: img.naturalWidth, height: img.naturalHeight });
+                                }}
+                              />
+                              {showCanvas && imgDims && (
+                                <ReactSketchCanvas
+                                  ref={canvasRef}
+                                  width={imgDims.width.toString()}
+                                  height={imgDims.height.toString()}
+                                  backgroundImage={mriImageUrl}
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    borderRadius: "8px",
+                                    border: "1px solid #3a3f52",
+                                    zIndex: 2,
+                                    position: "relative"
+                                  }}
+                                  strokeWidth={4}
+                                  strokeColor="#ff9800"
+                                />
+                              )}
+                              <div style={{ marginTop: 8 }}>
+                                <button onClick={() => setShowCanvas(v => !v)}>
+                                  {showCanvas ? "Hide the drawing" : "Draw on this image"}
+                                </button>
+                                {showCanvas && (
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        if (canvasRef.current) {
+                                          const data = await canvasRef.current.exportImage("png");
+                                          if (data) {
+                                            const a = document.createElement("a");
+                                            a.href = data;
+                                            a.download = "annotated.png";
+                                            a.click();
+                                          }
+                                        }
+                                      }}
+                                      style={{ marginLeft: 8 }}
+                                    >
+                                      Save the drawing
+                                    </button>
+                                    <button
+                                      onClick={() => canvasRef.current?.clearCanvas()}
+                                      style={{ marginLeft: 8 }}
+                                    >
+                                      Clear
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </>
                           )}
                         </div>
                         <div className="comparison-data">
@@ -325,7 +399,7 @@ export default function UploadDetailsPage() {
                             <div
                               style={sectionHeaderStyle}
                               onClick={() => setIsMuscleAbbrVisible(v => !v)}
-                              aria-label={isMuscleAbbrVisible ? "Скрыть" : "Показать"}
+                              aria-label={isMuscleAbbrVisible ? "Hide" : "Show"}
                             >
                               <span style={{ fontWeight: 600, fontSize: 14 }}>Muscle Abbreviations</span>
                               <span style={{
@@ -353,7 +427,7 @@ export default function UploadDetailsPage() {
                             <div
                               style={sectionHeaderStyle}
                               onClick={() => setIsHealthyControlVisible(v => !v)}
-                              aria-label={isHealthyControlVisible ? "Скрыть" : "Показать"}
+                              aria-label={isHealthyControlVisible ? "Hide" : "Show"}
                             >
                               <span style={{ fontWeight: 600, fontSize: 14 }}>Healthy Control</span>
                               <span style={{
@@ -482,7 +556,7 @@ export default function UploadDetailsPage() {
                             {dixonImageUrl ? (
                               <img
                                 src={dixonImageUrl}
-                                alt="DIXON Scan"
+                                alt="Dixon Scan"
                                 style={{
                                   width: "100%",
                                   height: "auto",
@@ -646,43 +720,30 @@ export default function UploadDetailsPage() {
               <div className="timeline-section">
                 <h3 style={{ color: "#0b0c0eff", fontSize: 16, fontWeight: 600, marginBottom: 15 }}>Disease Progression Timeline</h3>
                 <div className="timeline">
-                  <div className="timeline-point">
-                    <span className="timeline-label">Baseline</span>
-                  </div>
-                  <div className="timeline-point">
-                    <span className="timeline-label">6 months</span>
-                  </div>
-                  <div className="timeline-point">
-                    <span className="timeline-label">12 months</span>
-                  </div>
-                  <div className="timeline-point active">
-                    <span className="timeline-label">18 months</span>
-                  </div>
-                  <div className="timeline-point">
-                    <span className="timeline-label">24 months</span>
-                  </div>
+                  {["Baseline", "6 months", "12 months", "18 months", "24 months"].map((label, idx) => (
+                    <div
+                      key={label}
+                      className={`timeline-point${activeTimelineIndex === idx ? " active" : ""}`}
+                      onClick={() => setActiveTimelineIndex(idx)}
+                    >
+                      <span className="timeline-label">{label}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="progression-data">
-                  <div className="progression-point">
-                    <div className="progression-value value-normal">15%</div>
-                    <div className="progression-label">Fat Fraction</div>
-                  </div>
-                  <div className="progression-point">
-                    <div className="progression-value value-mild">22%</div>
-                    <div className="progression-label">Fat Fraction</div>
-                  </div>
-                  <div className="progression-point">
-                    <div className="progression-value value-moderate">31%</div>
-                    <div className="progression-label">Fat Fraction</div>
-                  </div>
-                  <div className="progression-point">
-                    <div className="progression-value value-severe">42%</div>
-                    <div className="progression-label">Current</div>
-                  </div>
-                  <div className="progression-point">
-                    <div className="progression-value value-severe">55%</div>
-                    <div className="progression-label">Predicted</div>
-                  </div>
+                  {progressionData.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="progression-point"
+                      style={{
+                        background: activeTimelineIndex === idx ? "rgba(0, 150, 255, 0.1)" : "#1a1d29",
+                        borderColor: activeTimelineIndex === idx ? "#0096ff" : "#3a3f52"
+                      }}
+                    >
+                      <div className={`progression-value value-${item.severity}`}>{item.value}</div>
+                      <div className="progression-label">{item.label}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -708,11 +769,11 @@ export default function UploadDetailsPage() {
             </>
           )}
 
-          {/* Если анализы скрыты, показываем заглушку */}
+          {/* if its hidden show the original */}
           {!isAnalysisVisible && (
             <div style={{
               background: "#232633",
-              border: "1px solid #3a3f52",
+              border: "1px solid #3f3f52",
               borderRadius: "8px",
               padding: "24px",
               color: "#9aa0a6",
