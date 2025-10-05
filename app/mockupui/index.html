@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMD Monitor - AI-Powered MRI Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1d29;
+            color: #e8eaed;
+            min-height: 100vh;
+            font-size: 13px;
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: 100vh;
+            gap: 1px;
+            background: #2d3142;
+        }
+        
+        .main-content {
+            background: #1a1d29;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar {
+            background: #232633;
+            border-left: 1px solid #3a3f52;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            margin-bottom: 25px;
+        }
+        
+        .header h1 {
+            color: #e8eaed;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: #9aa0a6;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        
+        .patient-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .patient-info-card {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+        }
+        
+        .patient-info-card .label {
+            color: #9aa0a6;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .patient-info-card .value {
+            color: #e8eaed;
+            font-weight: 600;
+        }
+        
+        .mri-viewer {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .mri-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .mri-title {
+            color: #e8eaed;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .scan-info {
+            color: #9aa0a6;
+            font-size: 12px;
+        }
+        
+        .mri-display {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .mri-image-container {
+            background: #000;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #3a3f52;
+            position: relative;
+        }
+        
+        .mri-image-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        
+        .comparison-data {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .comparison-section {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        
+        .comparison-section h4 {
+            color: #e8eaed;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #3a3f52;
+        }
+        
+        .muscle-data-item {
+            display: grid;
+            grid-template-columns: 1fr 60px 60px;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid #2d3142;
+            font-size: 11px;
+        }
+        
+        .muscle-data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .muscle-name {
+            color: #e8eaed;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            text-align: center;
+            font-weight: 600;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .value-normal { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .value-mild { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
+        .value-moderate { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .value-severe { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        
+        .biomarkers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .biomarker-card {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .biomarker-card:hover {
+            border-color: #5f6368;
+            background: #2a2d3a;
+        }
+        
+        .biomarker-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .biomarker-label {
+            color: #9aa0a6;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .biomarker-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-normal { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .status-mild { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
+        .status-moderate { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .status-severe { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        
+        /* Sidebar Styles */
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .sidebar-title {
+            color: #e8eaed;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .study-result {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .result-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .result-label {
+            color: #9aa0a6;
+        }
+        
+        .result-value {
+            color: #e8eaed;
+            font-weight: 600;
+        }
+        
+        .result-positive {
+            color: #f44336;
+        }
+        
+        .add-nodule-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .add-nodule-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .guideline-section {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .guideline-text {
+            color: #9aa0a6;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+        
+        .findings-list {
+            list-style: none;
+        }
+        
+        .findings-list li {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 4px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .finding-id {
+            color: #ff9800;
+            font-weight: 600;
+        }
+        
+        .brock-score {
+            color: #9aa0a6;
+            font-size: 10px;
+        }
+        
+        .timeline-section {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #3a3f52;
+        }
+        
+        .timeline-point {
+            background: #232633;
+            border: 3px solid #5f6368;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .timeline-point.active {
+            border-color: #f44336;
+            background: #f44336;
+        }
+        
+        .timeline-point:hover {
+            transform: scale(1.2);
+        }
+        
+        .timeline-label {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #9aa0a6;
+            white-space: nowrap;
+        }
+        
+        .progression-data {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .progression-point {
+            text-align: center;
+            padding: 8px 4px;
+            background: #1a1d29;
+            border-radius: 4px;
+            border: 1px solid #3a3f52;
+        }
+        
+        .progression-value {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .progression-label {
+            font-size: 9px;
+            color: #9aa0a6;
+            text-transform: uppercase;
+        }
+        
+        .ai-insights {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .ai-insights h3 {
+            color: #e8eaed;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .insight-item {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .insight-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .insight-header {
+            color: #ff9800;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .insight-text {
+            color: #e8eaed;
+            line-height: 1.4;
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            
+            .sidebar {
+                border-left: none;
+                border-top: 1px solid #3a3f52;
+                max-height: 400px;
+            }
+        }
+        
+        /* Tab Navigation Styles */
+        .tab-navigation {
+            display: flex;
+            gap: 2px;
+            background: #1a1d29;
+            border-radius: 8px;
+            padding: 4px;
+            border: 1px solid #3a3f52;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            color: #9aa0a6;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-btn.active {
+            background: #232633;
+            color: #e8eaed;
+            border: 1px solid #3a3f52;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: rgba(58, 63, 82, 0.3);
+            color: #e8eaed;
+        }
+        
+        .tab-content {
+            position: relative;
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        /* Dixon Imaging Styles */
+        .dixon-study-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+        
+        .dixon-figure-container {
+            background: #232633;
+            border: 1px solid #3a3f52;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .figure-header {
+            margin-bottom: 15px;
+        }
+        
+        .figure-header h4 {
+            color: #e8eaed;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .figure-caption {
+            color: #9aa0a6;
+            font-size: 12px;
+            font-style: italic;
+        }
+        
+        .figure-image-wrapper {
+            position: relative;
+        }
+        
+        .dixon-data-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .dixon-info-section {
+            background: #1a1d29;
+            border: 1px solid #3a3f52;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .dixon-info-section h4 {
+            color: #e8eaed;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #3a3f52;
+        }
+        
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            color: #9aa0a6;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .info-value {
+            color: #e8eaed;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .threshold-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .threshold-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            background: rgba(58, 63, 82, 0.3);
+            border-radius: 6px;
+        }
+        
+        .threshold-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .threshold-label {
+            color: #e8eaed;
+            font-size: 11px;
+            flex: 1;
+        }
+        
+        .progression-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .progression-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .age-marker {
+            background: #232633;
+            color: #4caf50;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            border: 1px solid #4caf50;
+        }
+        
+        .progression-desc {
+            color: #e8eaed;
+            font-size: 11px;
+            line-height: 1.4;
+            flex: 1;
+        }
+        
+        .muscle-pattern-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .pattern-category {
+            padding: 10px;
+            background: rgba(58, 63, 82, 0.3);
+            border-radius: 6px;
+        }
+        
+        .pattern-header {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        
+        .pattern-muscles {
+            color: #e8eaed;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="main-content">
+            <div class="header">
+                <h1>DMD Monitor</h1>
+                <div class="subtitle">AI-Powered MRI Analysis for Duchenne Muscular Dystrophy</div>
+            </div>
+            
+            <div class="patient-info-grid">
+                <div class="patient-info-card">
+                    <div class="label">Patient ID</div>
+                    <div class="value">DMD-2024-0847</div>
+                </div>
+                <div class="patient-info-card">
+                    <div class="label">Age / Sex</div>
+                    <div class="value">12Y / M</div>
+                </div>
+                <div class="patient-info-card">
+                    <div class="label">Ambulatory Status</div>
+                    <div class="value">Late Ambulatory</div>
+                </div>
+                <div class="patient-info-card">
+                    <div class="label">Steroid Treatment</div>
+                    <div class="value">Deflazacort</div>
+                </div>
+                <div class="patient-info-card">
+                    <div class="label">Last Scan</div>
+                    <div class="value">2024-05-15</div>
+                </div>
+                <div class="patient-info-card">
+                    <div class="label">NSAA Score</div>
+                    <div class="value">18/34</div>
+                </div>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation" style="margin-bottom: 25px;">
+                <button class="tab-btn active" data-tab="leg-analysis">Lower Leg Analysis</button>
+                <button class="tab-btn" data-tab="dixon-imaging">Dixon Imaging Study</button>
+            </div>
+            
+            <div class="biomarkers-grid">
+                <div class="biomarker-card">
+                    <div class="biomarker-value value-moderate">42%</div>
+                    <div class="biomarker-label">Fat Fraction</div>
+                    <div class="biomarker-status status-moderate">Moderate</div>
+                </div>
+                <div class="biomarker-card">
+                    <div class="biomarker-value value-severe">58ms</div>
+                    <div class="biomarker-label">T₂ Relaxation</div>
+                    <div class="biomarker-status status-severe">Elevated</div>
+                </div>
+                <div class="biomarker-card">
+                    <div class="biomarker-value value-mild">347cm²</div>
+                    <div class="biomarker-label">Muscle Volume</div>
+                    <div class="biomarker-status status-mild">Reduced</div>
+                </div>
+                <div class="biomarker-card">
+                    <div class="biomarker-value value-mild">3.2</div>
+                    <div class="biomarker-label">Edema Score</div>
+                    <div class="biomarker-status status-mild">Mild</div>
+                </div>
+                <div class="biomarker-card">
+                    <div class="biomarker-value value-normal">8%</div>
+                    <div class="biomarker-label">Asymmetry Index</div>
+                    <div class="biomarker-status status-normal">Normal</div>
+                </div>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Lower Leg Analysis Tab -->
+                <div class="tab-panel active" id="leg-analysis">
+                    <div class="mri-viewer">
+                        <div class="mri-header">
+                            <div class="mri-title">Lower Leg MRI Analysis</div>
+                            <div class="scan-info">Screened by MyoMetrics • 07:12 pm, 05/02/22</div>
+                        </div>
+                        
+                        <div class="mri-display">
+                            <div class="mri-image-container">
+                                <img src="mri.jpg" alt="MRI Scan Comparison">
+                            </div>
+                            
+                            <div class="comparison-data">
+                                <div style="background: #1a1d29; border: 1px solid #3a3f52; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+                                    <h4 style="color: #e8eaed; font-size: 13px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #3a3f52;">Muscle Abbreviations</h4>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                                        <div style="color: #9aa0a6;">TA = Tibialis Anterior</div>
+                                        <div style="color: #9aa0a6;">TP = Tibialis Posterior</div>
+                                        <div style="color: #9aa0a6;">Fib = Fibularis</div>
+                                        <div style="color: #9aa0a6;">Sol = Soleus</div>
+                                        <div style="color: #9aa0a6;">MG = Medial Gastrocnemius</div>
+                                        <div style="color: #9aa0a6;">LG = Lateral Gastrocnemius</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="comparison-section">
+                                    <h4>Healthy Control</h4>
+                                    <div style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 6px 0; border-bottom: 1px solid #3a3f52; font-size: 10px; color: #9aa0a6; font-weight: 600;">
+                                        <div>Muscle</div>
+                                        <div style="text-align: center;">Fat %</div>
+                                        <div style="text-align: center;">T₂ Time</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Tibialis Anterior</div>
+                                        <div class="metric-value value-normal">12%</div>
+                                        <div class="metric-value value-normal">30ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Tibialis Posterior</div>
+                                        <div class="metric-value value-normal">15%</div>
+                                        <div class="metric-value value-normal">32ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Fibularis</div>
+                                        <div class="metric-value value-normal">10%</div>
+                                        <div class="metric-value value-normal">29ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Soleus</div>
+                                        <div class="metric-value value-normal">18%</div>
+                                        <div class="metric-value value-normal">33ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Gastrocnemius</div>
+                                        <div class="metric-value value-normal">17%</div>
+                                        <div class="metric-value value-normal">34ms</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="comparison-section">
+                                    <h4>DMD Patient</h4>
+                                    <div style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 6px 0; border-bottom: 1px solid #3a3f52; font-size: 10px; color: #9aa0a6; font-weight: 600;">
+                                        <div>Muscle</div>
+                                        <div style="text-align: center;">Fat %</div>
+                                        <div style="text-align: center;">T₂ Time</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Tibialis Anterior</div>
+                                        <div class="metric-value value-moderate">45%</div>
+                                        <div class="metric-value value-severe">58ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Tibialis Posterior</div>
+                                        <div class="metric-value value-mild">32%</div>
+                                        <div class="metric-value value-moderate">48ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Fibularis</div>
+                                        <div class="metric-value value-severe">68%</div>
+                                        <div class="metric-value value-severe">72ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Soleus</div>
+                                        <div class="metric-value value-moderate">55%</div>
+                                        <div class="metric-value value-severe">65ms</div>
+                                    </div>
+                                    <div class="muscle-data-item">
+                                        <div class="muscle-name">Gastrocnemius</div>
+                                        <div class="metric-value value-severe">71%</div>
+                                        <div class="metric-value value-severe">77ms</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dixon Imaging Study Tab -->
+                <div class="tab-panel" id="dixon-imaging">
+                    <div class="mri-viewer">
+                        <div class="mri-header">
+                            <div class="mri-title">Dixon Imaging Study - Thigh Cross-Section</div>
+                            <div class="scan-info">Comparative Analysis • MyoMetrics</div>
+                        </div>
+                        
+                        <div class="dixon-study-container">
+                            <!-- Figure 2 Image -->
+                            <div class="dixon-figure-container">
+                                <div class="figure-header">
+                                    <h4>Figure 2: Dixon MRI Imaging Comparison</h4>
+                                    <div class="figure-caption">Control (9y) vs DMD (10y) - Thigh Cross-Sectional Analysis</div>
+                                </div>
+                                <div class="figure-image-wrapper">
+                                    <!-- Replace with actual Figure 2 image -->
+                                    <img src="dixon.jpg" alt="Figure 2 - Dixon MRI Comparison" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid #3a3f52;">
+                                </div>
+                            </div>
+                            
+                            <div class="dixon-data-panel">
+                                <div class="dixon-info-section">
+                                    <h4>Technical Specifications</h4>
+                                    <div class="info-grid">
+                                        <div class="info-item">
+                                            <div class="info-label">Dixon Imaging</div>
+                                            <div class="info-value">Chemical shift-encoded MRI separating water/fat signals</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">Fat Fraction</div>
+                                            <div class="info-value">Quantitative % intramuscular fat</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">T₂ Values</div>
+                                            <div class="info-value">Normal: 30-35ms | Affected: 35-80ms</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="dixon-info-section">
+                                    <h4>Functional Correlation Thresholds</h4>
+                                    <div class="threshold-grid">
+                                        <div class="threshold-item">
+                                            <div class="threshold-value value-normal">~10%</div>
+                                            <div class="threshold-label">Running with flight phase (VL fat)</div>
+                                        </div>
+                                        <div class="threshold-item">
+                                            <div class="threshold-value value-mild">~20%</div>
+                                            <div class="threshold-label">Running without flight phase (VL fat)</div>
+                                        </div>
+                                        <div class="threshold-item">
+                                            <div class="threshold-value value-moderate">~40%</div>
+                                            <div class="threshold-label">Loss of ambulation begins (quadriceps)</div>
+                                        </div>
+                                        <div class="threshold-item">
+                                            <div class="threshold-value value-severe">~70%</div>
+                                            <div class="threshold-label">Walking with compensation (quadriceps)</div>
+                                        </div>
+                                        <div class="threshold-item">
+                                            <div class="threshold-value value-severe">>75%</div>
+                                            <div class="threshold-label">Loss of floor rise (gluteus maximus)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="dixon-info-section">
+                                    <h4>Age-Related Progression</h4>
+                                    <div class="progression-timeline">
+                                        <div class="progression-item">
+                                            <div class="age-marker">1-2y</div>
+                                            <div class="progression-desc">13/14 children show gluteus maximus infiltration</div>
+                                        </div>
+                                        <div class="progression-item">
+                                            <div class="age-marker">3-4y</div>
+                                            <div class="progression-desc">Biceps femoris fat infiltration onset</div>
+                                        </div>
+                                        <div class="progression-item">
+                                            <div class="age-marker">5-6y</div>
+                                            <div class="progression-desc">Vastus lateralis involvement in most boys</div>
+                                        </div>
+                                        <div class="progression-item">
+                                            <div class="age-marker">9-10y</div>
+                                            <div class="progression-desc">>90% have >60% gluteus maximus replacement</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="dixon-info-section">
+                                    <h4>Muscle Involvement Patterns</h4>
+                                    <div class="muscle-pattern-grid">
+                                        <div class="pattern-category">
+                                            <div class="pattern-header" style="color: #f44336;">Most Affected</div>
+                                            <div class="pattern-muscles">Rectus femoris, Vastus muscles, Biceps femoris</div>
+                                        </div>
+                                        <div class="pattern-category">
+                                            <div class="pattern-header" style="color: #ff9800;">Moderately Affected</div>
+                                            <div class="pattern-muscles">Adductor group, Semimembranosus</div>
+                                        </div>
+                                        <div class="pattern-category">
+                                            <div class="pattern-header" style="color: #4caf50;">Relatively Spared</div>
+                                            <div class="pattern-muscles">Sartorius, Gracilis, Semitendinosus</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-section">
+                <h3 style="color: #e8eaed; font-size: 16px; font-weight: 600; margin-bottom: 15px;">Disease Progression Timeline</h3>
+                <div class="timeline">
+                    <div class="timeline-point">
+                        <span class="timeline-label">Baseline</span>
+                    </div>
+                    <div class="timeline-point">
+                        <span class="timeline-label">6 months</span>
+                    </div>
+                    <div class="timeline-point">
+                        <span class="timeline-label">12 months</span>
+                    </div>
+                    <div class="timeline-point active">
+                        <span class="timeline-label">18 months</span>
+                    </div>
+                    <div class="timeline-point">
+                        <span class="timeline-label">24 months</span>
+                    </div>
+                </div>
+                <div class="progression-data">
+                    <div class="progression-point">
+                        <div class="progression-value value-normal">15%</div>
+                        <div class="progression-label">Fat Fraction</div>
+                    </div>
+                    <div class="progression-point">
+                        <div class="progression-value value-mild">22%</div>
+                        <div class="progression-label">Fat Fraction</div>
+                    </div>
+                    <div class="progression-point">
+                        <div class="progression-value value-moderate">31%</div>
+                        <div class="progression-label">Fat Fraction</div>
+                    </div>
+                    <div class="progression-point">
+                        <div class="progression-value value-severe">42%</div>
+                        <div class="progression-label">Current</div>
+                    </div>
+                    <div class="progression-point">
+                        <div class="progression-value value-severe">55%</div>
+                        <div class="progression-label">Predicted</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-insights">
+                <h3>🤖 AI Clinical Insights</h3>
+                <div class="insight-item">
+                    <div class="insight-header">Critical Finding</div>
+                    <div class="insight-text">Gastrocnemius muscles show severe fatty infiltration (>65%) with high T2 values indicating ongoing inflammation. Immediate therapeutic intervention recommended.</div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-header">Pattern Analysis</div>
+                    <div class="insight-text">Distal-to-proximal progression pattern observed. Tibialis posterior showing relative preservation - potential compensatory mechanism detected.</div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-header">Comparative Analysis</div>
+                    <div class="insight-text">Patient's progression rate is 1.5x faster than cohort average. Consider escalating treatment protocol or clinical trial enrollment.</div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-header">Therapeutic Target</div>
+                    <div class="insight-text">Fibularis and soleus muscles in critical transition phase. Targeted physiotherapy and emerging therapies may preserve function.</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <span class="sidebar-title">Patient</span>
+                    <span style="color: #9aa0a6; font-size: 11px;">Age: 12Y</span>
+                </div>
+                <div style="color: #9aa0a6; font-size: 11px; margin-bottom: 15px;">
+                    Duchenne Muscular Dystrophy • Late Ambulatory
+                </div>
+            </div>
+            
+            <div class="study-result">
+                <div class="result-row">
+                    <span class="result-label">Study result</span>
+                    <span class="result-value result-positive">Positive</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Findings</span>
+                    <span class="result-value">4</span>
+                </div>
+            </div>
+            
+            <button class="add-nodule-btn">+ Add Finding</button>
+            
+            <div class="guideline-section">
+                <div style="color: #9aa0a6; font-size: 11px; margin-bottom: 8px;">Fleischner Society guideline recommendation</div>
+                <div class="guideline-text">
+                    MRI at 6-12 months to confirm persistence, then every 2 yrs until 5 yrs.
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title" style="margin-bottom: 10px;">Muscle Analysis</div>
+                <ul class="findings-list">
+                    <li>
+                        <span><span class="finding-id">#RML 1</span></span>
+                        <span class="brock-score">Brock score: 4.1</span>
+                    </li>
+                    <li>
+                        <span><span class="finding-id">#RUL 2</span></span>
+                        <span class="brock-score">Brock score: 4.0</span>
+                    </li>
+                    <li>
+                        <span><span class="finding-id">#RUL 3</span></span>
+                        <span class="brock-score">Brock score: 2.3</span>
+                    </li>
+                    <li>
+                        <span><span class="finding-id">#RML 4</span></span>
+                        <span class="brock-score">Brock score: 2.3</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title" style="margin-bottom: 10px;">AI Predictions</div>
+                <div class="study-result">
+                    <div class="result-row">
+                        <span class="result-label">Ambulation Loss</span>
+                        <span class="result-value" style="color: #ff9800;">18 months</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Model Confidence</span>
+                        <span class="result-value">85%</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">6MO Fat Increase</span>
+                        <span class="result-value" style="color: #ff9800;">+15%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title" style="margin-bottom: 10px;">Other Findings</div>
+                <div style="color: #9aa0a6; font-size: 11px; line-height: 1.4;">
+                    Bilateral symmetric muscle involvement with distal-to-proximal progression pattern. Preserved diaphragmatic function noted.
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-title" style="margin-bottom: 10px;">Recommendations</div>
+                <div style="background: #1a1d29; border: 1px solid #3a3f52; border-radius: 6px; padding: 10px;">
+                    <div style="color: #ff9800; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Priority Actions</div>
+                    <div style="color: #e8eaed; font-size: 11px; line-height: 1.4; margin-bottom: 8px;">
+                        • Increase monitoring frequency to 3 months<br>
+                        • Consider therapeutic intervention for VL/RF<br>
+                        • Evaluate for clinical trial eligibility
+                    </div>
+                    <div style="color: #9aa0a6; font-size: 10px;">
+                        Next scan recommended: 08/15/2024
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and panels
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding panel
+                this.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+        
+        // Enhanced interactions without muscle markers
+        document.querySelectorAll('.muscle-data-item').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(0, 150, 255, 0.1)';
+                this.style.borderColor = '#0096ff';
+                this.style.transform = 'translateX(3px)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.background = '';
+                this.style.borderColor = '#2d3142';
+                this.style.transform = '';
+            });
+        });
+        
+        // Timeline interaction
+        document.querySelectorAll('.timeline-point').forEach((point, index) => {
+            point.addEventListener('click', function() {
+                // Remove active class from all points
+                document.querySelectorAll('.timeline-point').forEach(p => p.classList.remove('active'));
+                // Add active class to clicked point
+                this.classList.add('active');
+                
+                // Update progression data highlight
+                document.querySelectorAll('.progression-point').forEach((prog, i) => {
+                    if (i === index) {
+                        prog.style.background = 'rgba(0, 150, 255, 0.1)';
+                        prog.style.borderColor = '#0096ff';
+                    } else {
+                        prog.style.background = '#1a1d29';
+                        prog.style.borderColor = '#3a3f52';
+                    }
+                });
+            });
+        });
+        
+        // Biomarker card hover effects
+        document.querySelectorAll('.biomarker-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                const label = this.querySelector('.biomarker-label').textContent.toLowerCase();
+                
+                // Highlight related findings in sidebar
+                document.querySelectorAll('.findings-list li').forEach(finding => {
+                    const findingText = finding.textContent.toLowerCase();
+                    if (label.includes('fat') && findingText.includes('rml') ||
+                        label.includes('t₂') && findingText.includes('rul')) {
+                        finding.style.background = 'rgba(0, 150, 255, 0.1)';
+                        finding.style.borderColor = '#0096ff';
+                    }
+                });
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                document.querySelectorAll('.findings-list li').forEach(finding => {
+                    finding.style.background = '#1a1d29';
+                    finding.style.borderColor = '#3a3f52';
+                });
+            });
+        });
+        
+        // Add nodule button functionality
+        document.querySelector('.add-nodule-btn').addEventListener('click', function() {
+            const findingsList = document.querySelector('.findings-list');
+            const newFinding = document.createElement('li');
+            const nextId = findingsList.children.length + 1;
+            
+            newFinding.innerHTML = `
+                <span><span class="finding-id">#NEW ${nextId}</span></span>
+                <span class="brock-score">Brock score: 1.8</span>
+            `;
+            
+            findingsList.appendChild(newFinding);
+            
+            // Update findings count
+            const findingsCount = document.querySelector('.result-row .result-value');
+            if (findingsCount.textContent !== 'Positive') {
+                findingsCount.textContent = parseInt(findingsCount.textContent) + 1;
+            }
+        });
+        
+        // Smooth scrolling for main content
+        const mainContent = document.querySelector('.main-content');
+        let isScrolling = false;
+        
+        mainContent.addEventListener('wheel', function(e) {
+            if (!isScrolling) {
+                isScrolling = true;
+                requestAnimationFrame(() => {
+                    isScrolling = false;
+                });
+            }
+        });
+        
+        // Auto-update timestamps
+        function updateTimestamp() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            const dateString = now.toLocaleDateString('en-US', { 
+                month: '2-digit', 
+                day: '2-digit', 
+                year: '2-digit' 
+            });
+            
+            const scanInfo = document.querySelector('.scan-info');
+            if (scanInfo) {
+                scanInfo.textContent = `Screened by MyoMetrics • ${timeString}, ${dateString}`;
+            }
+        }
+        
+        // Update timestamp every minute
+        updateTimestamp();
+        setInterval(updateTimestamp, 60000);
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'n':
+                        e.preventDefault();
+                        document.querySelector('.add-nodule-btn').click();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        location.reload();
+                        break;
+                }
+            }
+        });
+        
+        // Responsive sidebar toggle for mobile
+        function createMobileToggle() {
+            if (window.innerWidth <= 1200) {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.innerHTML = '📊';
+                toggleBtn.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #232633;
+                    border: 1px solid #3a3f52;
+                    color: #e8eaed;
+                    padding: 10px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    z-index: 1000;
+                    font-size: 16px;
+                `;
+                
+                const sidebar = document.querySelector('.sidebar');
+                let sidebarVisible = true;
+                
+                toggleBtn.addEventListener('click', () => {
+                    sidebarVisible = !sidebarVisible;
+                    sidebar.style.display = sidebarVisible ? 'block' : 'none';
+                    toggleBtn.innerHTML = sidebarVisible ? '📊' : '📈';
+                });
+                
+                document.body.appendChild(toggleBtn);
+            }
+        }
+        
+        // Initialize mobile toggle
+        createMobileToggle();
+        window.addEventListener('resize', createMobileToggle);
+    </script>
+</body>
+</html>

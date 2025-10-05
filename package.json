@@ -9,13 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "cornerstone-core": "^2.6.1",
+    "cornerstone-tools": "^6.0.10",
+    "cornerstone-wado-image-loader": "^4.13.2",
     "dcmjs": "^0.44.1",
+    "dicom-parser": "^1.8.21",
     "next": "15.4.5",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-sketch-canvas": "^6.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/cornerstone-core": "^2.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
