@@ -734,8 +734,14 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
             )}
 
             <p className="text-sm text-muted">
-                <button
-                onClick={() => router.push("/mockupui")}
+              <button
+                onClick={() => {
+                  if (uploadResult) {
+                    router.push(`/upload/${uploadResult.upload_id}`);
+                  } else if (batchResult) {
+                    router.push(`/batch/${batchResult.batch_id}`);
+                  }
+                }}
                 className="btn-primary w-full"
               >
                 {'Redirect to the results page'}

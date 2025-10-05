@@ -6,6 +6,8 @@ import Image from "next/image";
 import { microserviceAPI } from "@/lib/api/microservice";
 import { useParams } from "next/navigation";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from "react-sketch-canvas";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Navigation from "@/components/Navigation";
 
 export default function UploadDetailsPage() {
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
@@ -19,6 +21,7 @@ export default function UploadDetailsPage() {
   const [isFuncThresholdsVisible, setIsFuncThresholdsVisible] = useState(false);
   const [isAgeProgressionVisible, setIsAgeProgressionVisible] = useState(false);
   const [isMusclePatternVisible, setIsMusclePatternVisible] = useState(false);
+  const [isMRIImage, setIsMRIImage] = useState(false);
   
 
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
@@ -177,7 +180,7 @@ export default function UploadDetailsPage() {
     };
   }, []);
 
-  // Сsections styles
+  // Сections styles
   const sectionCardStyle = {
     background: "#1a1d29",
     border: "1px solid #3a3f52",
@@ -209,6 +212,8 @@ export default function UploadDetailsPage() {
   const [imgDims, setImgDims] = useState<{ width: number; height: number } | null>(null);
 
   return (
+    <ProtectedRoute>
+    <Navigation>
     <div className="dashboard-container">
       <div className="main-content">
         <div className="header">
@@ -298,20 +303,22 @@ export default function UploadDetailsPage() {
               </div>
 
               <div className="tab-navigation" style={{ marginBottom: "25px" }}>
-                <button
-                  className={`tab-btn${activeTab === "leg-analysis" ? " active" : ""}`}
-                  onClick={() => setActiveTab("leg-analysis")}
-                  data-tab="leg-analysis"
-                >
-                  Lower Leg Analysis
-                </button>
-                <button
-                  className={`tab-btn${activeTab === "dixon-imaging" ? " active" : ""}`}
-                  onClick={() => setActiveTab("dixon-imaging")}
-                  data-tab="dixon-imaging"
-                >
-                  Dixon Imaging Study
-                </button>
+                {activeTab === "leg-analysis" && (
+                  <button
+                    className="tab-btn"
+                    data-tab="dixon-imaging"
+                  >
+                    Dixon Imaging Study
+                  </button>
+                )}
+                {activeTab === "dixon-imaging" && (
+                  <button
+                    className="tab-btn"
+                    data-tab="leg-analysis"
+                  >
+                    Lower Leg Analysis
+                  </button>
+                )}
               </div>
 
               <div className="tab-content">
@@ -880,5 +887,7 @@ export default function UploadDetailsPage() {
         </div>
       </div>
     </div>
+    </Navigation>
+    </ProtectedRoute>
   );
 }
