@@ -249,7 +249,7 @@ class MicroserviceAPI {
     return headers;
   }
 
-  async uploadFile(file: File, onProgress?: (progress: number) => void): Promise<UploadResponse> {
+  async uploadFile(file: File, onProgress?: (progress: number) => void, imageType?: string): Promise<UploadResponse> {
     if (isDevMode) {
       // Simulate upload progress in development mode
       return new Promise((resolve) => {
@@ -306,7 +306,7 @@ class MicroserviceAPI {
         reject(new Error('Network error during upload'));
       });
 
-      xhr.open('POST', `${MICROSERVICE_URL}/upload`);
+      xhr.open('POST', `${MICROSERVICE_URL}/upload${imageType ? `?image_type=${encodeURIComponent(imageType)}` : ''}`);
       
       // Set headers
       const headers = this.getFileUploadHeaders(file.name);

@@ -23,6 +23,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   const [batchResult, setBatchResult] = useState<BatchUploadResponse | null>(null);
   const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
+  const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
           setUploadProgress(parsed);
         }
       } catch (e) {
-        console.error("Ошибка парсинга uploadProgress", e);
+        console.error("Parsing error in uploadProgress", e);
       }
     }
   }, []); 
@@ -312,11 +313,10 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
   useEffect(() => {
     const saved = localStorage.getItem("savedFiles");
     if (saved) {
-      setSelectedFiles(JSON.parse(saved)); // selectedFiles будет массив объектов {name, size}
+      setSelectedFiles(JSON.parse(saved)); 
     }
   }, []);
-
-
+  
   const handleFileSelection = (files: File[]) => {
   if (files.length === 1) {
     const validation = microserviceAPI.validateFile(files[0]);
@@ -346,6 +346,10 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
+    if (!imageType) {
+      setError("Please select diagnosis type (MS or DMD).");
+      return;
+    }
 
     setIsUploading(true);
     setError('');
@@ -367,9 +371,11 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
         
       } else {
         // Single file upload
-        const result = await microserviceAPI.uploadFile(selectedFiles[0], (progress) => {
-          setUploadProgress({ percentage: progress, stage: 'uploading' });
-        });
+        const result = await microserviceAPI.uploadFile(
+          selectedFiles[0],
+          (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
+          imageType // <-- передаем выбранный тип
+        );
 
         setUploadResult(result);
         setUploadProgress({ percentage: 100, stage: 'analyzing' });
@@ -474,6 +480,7 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     }
   }
 }, []);
+
 
   return (
     <div className="space-y-6">
@@ -735,13 +742,9 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
 
             <p className="text-sm text-muted">
               <button
-                onClick={() => {
-                  if (uploadResult) {
-                    router.push(`/upload/${uploadResult.upload_id}`);
-                  } else if (batchResult) {
-                    router.push(`/batch/${batchResult.batch_id}`);
-                  }
-                }}
+                onClick={() => handleViewDetails(
+                  batchResult ? batchResult.batch_id : uploadResult?.upload_id ?? ''
+                )}
                 className="btn-primary w-full"
               >
                 {'Redirect to the results page'}
@@ -765,6 +768,26 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Diagnosis Type Selection */}
+      {selectedFiles.length > 0 && (
+        <div className="mb-4">
+          <label htmlFor="imageType" className="block text-sm font-medium mb-1">
+            Diagnosis Type
+          </label>
+          <select
+            id="imageType"
+            value={imageType}
+            onChange={e => setImageType(e.target.value as "MS" | "DMD" | "")}
+            className="border rounded px-3 py-2 w-full"
+            required
+          >
+            <option value="">Select diagnosis</option>
+            <option value="MS">MS - Multiple Sclerosis</option>
+            <option value="DMD">DMD - Duchenne Muscular Dystrophy</option>
+          </select>
         </div>
       )}
     </div>

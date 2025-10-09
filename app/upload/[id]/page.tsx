@@ -1,5 +1,6 @@
 "use client";
 
+import imageLocal from "./image.png";
 import { useEffect, useState, useRef } from "react";
 import "./page.css";
 import Image from "next/image";
@@ -21,27 +22,38 @@ export default function UploadDetailsPage() {
   const [isFuncThresholdsVisible, setIsFuncThresholdsVisible] = useState(false);
   const [isAgeProgressionVisible, setIsAgeProgressionVisible] = useState(false);
   const [isMusclePatternVisible, setIsMusclePatternVisible] = useState(false);
-  const [isMRIImage, setIsMRIImage] = useState(false);
-  
 
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
-  const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
+  const [uploadInfo, setUploadInfo] = useState<{ image_type?: string } | null>(null);
 
   const params = useParams();
   const uploadId = params.id as string;
 
-  const mriUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
-  const dixonUploadId = "50e3aad3-8142-4205-bb1f-18450c76e463";
+  useEffect(() => {
+    if (uploadId) {
+      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
+      // fetch image_type
+      (async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/info`);
+          if (res.ok) {
+            const data = await res.json();
+            setUploadInfo(data);
+          }
+        } catch {}
+      })();
+    }
+  }, [uploadId]);
+
+  const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
 
   // useEffect for fetching images
   useEffect(() => {
-    if (mriUploadId) {
+    if (uploadId) {
       setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
-    }
-    if (dixonUploadId) {
       setDixonImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
     }
-  }, []);
+  }, [uploadId]);
 
   // useEffect for interactive features
   useEffect(() => {
@@ -211,6 +223,8 @@ export default function UploadDetailsPage() {
   const [showCanvas, setShowCanvas] = useState(false);
   const [imgDims, setImgDims] = useState<{ width: number; height: number } | null>(null);
 
+  const diagnosisType = uploadInfo?.image_type?.toUpperCase();
+
   return (
     <ProtectedRoute>
     <Navigation>
@@ -250,28 +264,36 @@ export default function UploadDetailsPage() {
               <div className="patient-info-grid">
                 <div className="patient-info-card">
                   <div className="label">Patient ID</div>
-                  <div className="value">DMD-2024-0847</div>
+                  <div className="value">{diagnosisType === "DMD" ? "DMD-2024-0847" : diagnosisType === "MS" ? "MS-2024-0847" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Age / Sex</div>
-                  <div className="value">12Y / M</div>
+                  <div className="value">{diagnosisType === "DMD" ? "12Y / M" : diagnosisType === "MS" ? "32Y / F" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Ambulatory Status</div>
-                  <div className="value">Late Ambulatory</div>
+                  <div className="value">{diagnosisType === "DMD" ? "Late Ambulatory" : diagnosisType === "MS" ? "Ambulatory" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Steroid Treatment</div>
-                  <div className="value">Deflazacort</div>
+                  <div className="value">{diagnosisType === "DMD" ? "Deflazacort" : diagnosisType === "MS" ? "None" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Last Scan</div>
                   <div className="value">2024-05-15</div>
                 </div>
-                <div className="patient-info-card">
-                  <div className="label">NSAA Score</div>
-                  <div className="value">18/34</div>
-                </div>
+                {diagnosisType === "DMD" && (
+                  <div className="patient-info-card">
+                    <div className="label">NSAA Score</div>
+                    <div className="value">18/34</div>
+                  </div>
+                )}
+                {diagnosisType === "MS" && (
+                  <div className="patient-info-card">
+                    <div className="label">EDSS Score</div>
+                    <div className="value">3.5</div>
+                  </div>
+                )}
               </div>
 
               <div className="biomarkers-grid">
@@ -295,11 +317,13 @@ export default function UploadDetailsPage() {
                   <div className="biomarker-label">Edema Score</div>
                   <div className="biomarker-status status-mild">Mild</div>
                 </div>
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-normal">8%</div>
-                  <div className="biomarker-label">Asymmetry Index</div>
-                  <div className="biomarker-status status-normal">Normal</div>
-                </div>
+                {diagnosisType === "DMD" && (
+                  <div className="biomarker-card">
+                    <div className="biomarker-value value-normal">8%</div>
+                    <div className="biomarker-label">Asymmetry Index</div>
+                    <div className="biomarker-status status-normal">Normal</div>
+                  </div>
+                )}
               </div>
 
               <div className="tab-navigation" style={{ marginBottom: "25px" }}>
@@ -308,7 +332,7 @@ export default function UploadDetailsPage() {
                     className="tab-btn"
                     data-tab="dixon-imaging"
                   >
-                    Dixon Imaging Study
+                    {uploadInfo?.image_type || "Dixon Imaging Study"}
                   </button>
                 )}
                 {activeTab === "dixon-imaging" && (
@@ -326,80 +350,44 @@ export default function UploadDetailsPage() {
                   <div className="tab-panel active" id="leg-analysis">
                     <div className="mri-viewer">
                       <div className="mri-header">
-                        <div className="mri-title">Lower Leg MRI Analysis</div>
+                        <div className="mri-title">Brain Analysis</div>
                         <div className="scan-info">Screened by MyoMetrics • 07:12 pm, 05/02/22</div>
                       </div>
                       <div className="mri-display">
-                        <div className="mri-image-container" style={{ position: "relative" }}>
-                          {mriImageUrl && (
-                            <>
-                              <img
-                                src={mriImageUrl}
-                                alt="MRI Scan"
-                                style={{
-                                  width: "100%",
-                                  height: "auto",
-                                  borderRadius: "8px",
-                                  border: "1px solid #3a3f52",
-                                  display: showCanvas ? "none" : "block"
-                                }}
-                                onLoad={e => {
-                                  const img = e.currentTarget;
-                                  setImgDims({ width: img.naturalWidth, height: img.naturalHeight });
-                                }}
-                              />
-                              {showCanvas && imgDims && (
-                                <ReactSketchCanvas
-                                  ref={canvasRef}
-                                  width={imgDims.width.toString()}
-                                  height={imgDims.height.toString()}
-                                  backgroundImage={mriImageUrl}
-                                  style={{
-                                    width: "100%",
-                                    height: "auto",
-                                    borderRadius: "8px",
-                                    border: "1px solid #3a3f52",
-                                    zIndex: 2,
-                                    position: "relative"
-                                  }}
-                                  strokeWidth={4}
-                                  strokeColor="#ff9800"
-                                />
-                              )}
-                              <div style={{ marginTop: 8 }}>
-                                <button onClick={() => setShowCanvas(v => !v)}>
-                                  {showCanvas ? "Hide the drawing" : "Draw on this image"}
-                                </button>
-                                {showCanvas && (
-                                  <>
-                                    <button
-                                      onClick={async () => {
-                                        if (canvasRef.current) {
-                                          const data = await canvasRef.current.exportImage("png");
-                                          if (data) {
-                                            const a = document.createElement("a");
-                                            a.href = data;
-                                            a.download = "annotated.png";
-                                            a.click();
-                                          }
-                                        }
-                                      }}
-                                      style={{ marginLeft: 8 }}
-                                    >
-                                      Save the drawing
-                                    </button>
-                                    <button
-                                      onClick={() => canvasRef.current?.clearCanvas()}
-                                      style={{ marginLeft: 8 }}
-                                    >
-                                      Clear
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </>
+                        <div className="mri-image-container">
+                          {mriImageUrl ? (
+                            <img
+                              src={mriImageUrl}
+                              alt="MRI Scan"
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                borderRadius: "8px",
+                                border: "1px solid #3a3f52",
+                                display: showCanvas ? "none" : "block"
+                              }}
+                              onLoad={e => {
+                                const img = e.currentTarget;
+                                setImgDims({ width: img.naturalWidth, height: img.naturalHeight });
+                              }}
+                            />
+                          ) : (
+                            <Image
+                              src={imageLocal}
+                              alt="MRI Scan"
+                              width={600}
+                              height={400}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                borderRadius: "8px",
+                                border: "1px solid #3a3f52",
+                                display: showCanvas ? "none" : "block"
+                              }}
+                            />
                           )}
                         </div>
+
                         <div className="comparison-data">
                           {/* Muscle Abbreviations */}
                           <div style={sectionCardStyle}>
@@ -447,7 +435,7 @@ export default function UploadDetailsPage() {
                             </div>
                             {isHealthyControlVisible && (
                               <div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px", gap: "8px", padding: "6px 0", borderBottom: "1px solid #3a3f52", fontSize: "10px", color: "#9aa0a6", fontWeight: 600 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px", gap: "8px", padding: "6px 0", borderBottom: "1px solid #3f3f52", fontSize: "10px", color: "#9aa0a6", fontWeight: 600 }}>
                                   <div>Muscle</div>
                                   <div style={{ textAlign: "center" }}>Fat %</div>
                                   <div style={{ textAlign: "center" }}>T₂ Time</div>
@@ -504,7 +492,7 @@ export default function UploadDetailsPage() {
                                   gridTemplateColumns: "1fr 60px 60px",
                                   gap: "8px",
                                   padding: "6px 0",
-                                  borderBottom: "1px solid #3a3f52",
+                                  borderBottom: "1px solid #3f3f52",
                                   fontSize: "10px",
                                   color: "#9aa0a6",
                                   fontWeight: 600
@@ -665,23 +653,9 @@ export default function UploadDetailsPage() {
                               }}>▶</span>
                             </div>
                             {isAgeProgressionVisible && (
-                              <div className="progression-timeline">
-                                <div className="progression-item">
-                                  <div className="age-marker">1-2y</div>
-                                  <div className="progression-desc">13/14 children show gluteus maximus infiltration</div>
-                                </div>
-                                <div className="progression-item">
-                                  <div className="age-marker">3-4y</div>
-                                  <div className="progression-desc">Biceps femoris fat infiltration onset</div>
-                                </div>
-                                <div className="progression-item">
-                                  <div className="age-marker">5-6y</div>
-                                  <div className="progression-desc">Vastus lateralis involvement in most boys</div>
-                                </div>
-                                <div className="progression-item">
-                                  <div className="age-marker">9-10y</div>
-                                  <div className="progression-desc">{'>90% have >60% gluteus maximus replacement'}</div>
-                                </div>
+                              <div style={{ color: "#9aa0a6", fontSize: 13, padding: "10px 0" }}>
+                                {/* Пустое поле или placeholder */}
+                                No data available yet.
                               </div>
                             )}
                           </div>
@@ -716,6 +690,29 @@ export default function UploadDetailsPage() {
                                 </div>
                               </div>
                             )}
+                          </div>
+
+                          {/* Disease Rate & Accuracy */}
+                          <div style={sectionCardStyle}>
+                            <div style={sectionHeaderStyle}>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Disease Rate & Accuracy</span>
+                            </div>
+                            <div style={{ color: "#9aa0a6", fontSize: 13, padding: "10px 0" }}>
+                              <div>Disease progression rate: 1.5x cohort average</div>
+                              <div>Model accuracy: 85%</div>
+                            </div>
+                          </div>
+
+                          {/* Segmentation Statistics */}
+                          <div style={sectionCardStyle}>
+                            <div style={sectionHeaderStyle}>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Segmentation Statistics</span>
+                            </div>
+                            <div style={{ color: "#9aa0a6", fontSize: 13, padding: "10px 0" }}>
+                              <div>Total voxels: 2,834,259</div>
+                              <div>MS Lesion voxels (class 18): 1,116</div>
+                              <div>Lesion volume: 0.04%</div>
+                            </div>
                           </div>
                         </div>
                       </div>
