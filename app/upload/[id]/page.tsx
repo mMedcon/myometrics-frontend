@@ -1,6 +1,5 @@
 "use client";
 
-import imageLocal from "./image.png";
 import { useEffect, useState, useRef } from "react";
 import "./page.css";
 import Image from "next/image";
@@ -30,30 +29,24 @@ export default function UploadDetailsPage() {
   const uploadId = params.id as string;
 
   useEffect(() => {
-    if (uploadId) {
-      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
-      // fetch image_type
-      (async () => {
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/info`);
-          if (res.ok) {
-            const data = await res.json();
-            setUploadInfo(data);
-          }
-        } catch {}
-      })();
-    }
-  }, [uploadId]);
+  if (uploadId) {
+    const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
+    setMriImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
+    setDixonImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
+
+    (async () => {
+      try {
+        const res = await fetch(`${baseUrl}/upload/${uploadId}/info`);
+        if (res.ok) {
+          const data = await res.json();
+          setUploadInfo(data);
+        }
+      } catch {}
+    })();
+  }
+}, [uploadId]);
 
   const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
-
-  // useEffect for fetching images
-  useEffect(() => {
-    if (uploadId) {
-      setMriImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
-      setDixonImageUrl(`${process.env.NEXT_PUBLIC_MICROSERVICE_URL}/upload/${uploadId}/preview`);
-    }
-  }, [uploadId]);
 
   // useEffect for interactive features
   useEffect(() => {
@@ -357,8 +350,8 @@ export default function UploadDetailsPage() {
                         <div className="mri-image-container">
                           {mriImageUrl ? (
                             <img
-                              src={mriImageUrl}
-                              alt="MRI Scan"
+                              src="/image.png"
+                              alt="DICOM Scan"
                               style={{
                                 width: "100%",
                                 height: "auto",
@@ -373,7 +366,7 @@ export default function UploadDetailsPage() {
                             />
                           ) : (
                             <Image
-                              src={imageLocal}
+                              src="/image.png"
                               alt="MRI Scan"
                               width={600}
                               height={400}
@@ -548,20 +541,19 @@ export default function UploadDetailsPage() {
                             <div className="figure-caption">Control (9y) vs DMD (10y) - Thigh Cross-Sectional Analysis</div>
                           </div>
                           <div className="figure-image-wrapper">
-                            {dixonImageUrl ? (
-                              <img
-                                src={dixonImageUrl}
-                                alt="Dixon Scan"
-                                style={{
-                                  width: "100%",
-                                  height: "auto",
-                                  borderRadius: "8px",
-                                  border: "1px solid #3a3f52",
-                                }}
-                              />
-                            ) : (
-                              <div style={{ color: "#9aa0a6", fontSize: 14 }}>Dixon image not available</div>
-                            )}
+                            <Image
+                              src="/image.png"
+                              alt="DICOM Scan"
+                              width={600}
+                              height={400}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                borderRadius: "8px",
+                                border: "1px solid #3a3f52",
+                                display: showCanvas ? "none" : "block"
+                              }}
+                            />
                           </div>
                         </div>
                         <div className="dixon-data-panel">
