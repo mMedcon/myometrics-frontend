@@ -10,10 +10,12 @@ interface UploadProgress {
 }
 
 interface UploadWorkflowProps {
+  detectionType: 'dmd' | 'tumor';
   onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
+  onUploadAttempt?: () => void;
 }
 
-export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps) {
+export default function UploadWorkflow({ detectionType, onUploadComplete,onUploadAttempt }: UploadWorkflowProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -349,6 +351,11 @@ export default function UploadWorkflow({ onUploadComplete }: UploadWorkflowProps
     if (!imageType) {
       setError("Please select diagnosis type (MS or DMD).");
       return;
+    }
+
+    // Call validation from parent component
+    if (onUploadAttempt) {
+      onUploadAttempt();
     }
 
     setIsUploading(true);
