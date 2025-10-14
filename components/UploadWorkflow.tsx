@@ -11,11 +11,12 @@ interface UploadProgress {
 
 interface UploadWorkflowProps {
   detectionType: 'dmd' | 'tumor';
+  imageType: "MS" | "DMD" | "";
   onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
   onUploadAttempt?: () => void;
 }
 
-export default function UploadWorkflow({ detectionType, onUploadComplete,onUploadAttempt }: UploadWorkflowProps) {
+export default function UploadWorkflow({ detectionType, imageType, onUploadComplete, onUploadAttempt }: UploadWorkflowProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -25,7 +26,6 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
   const [batchResult, setBatchResult] = useState<BatchUploadResponse | null>(null);
   const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -381,7 +381,7 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
         const result = await microserviceAPI.uploadFile(
           selectedFiles[0],
           (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
-          imageType // <-- передаем выбранный тип
+          imageType // <-- теперь это из пропсов
         );
 
         setUploadResult(result);
@@ -781,9 +781,7 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
       {/* Diagnosis Type Selection */}
       {selectedFiles.length > 0 && (
         <div className="mb-4">
-          <label htmlFor="imageType" className="block text-sm font-medium mb-1">
-            Diagnosis Type
-          </label>
+          {/*
           <select
             id="imageType"
             value={imageType}
@@ -795,6 +793,7 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
             <option value="MS">MS - Multiple Sclerosis</option>
             <option value="DMD">DMD - Duchenne Muscular Dystrophy</option>
           </select>
+          */}
         </div>
       )}
     </div>

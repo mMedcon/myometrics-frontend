@@ -224,8 +224,20 @@ export default function UploadDetailsPage() {
     <div className="dashboard-container">
       <div className="main-content">
         <div className="header">
-          <h1>DMD Monitor</h1>
-          <div className="subtitle">AI-Powered MRI Analysis for Duchenne Muscular Dystrophy</div>
+          <h1>
+            {diagnosisType === "DMD"
+              ? "DMD Monitor"
+              : diagnosisType === "MS"
+                ? "Tumor Monitor"
+                : "Monitor"}
+          </h1>
+          <div className="subtitle">
+            {diagnosisType === "DMD"
+              ? "AI-Powered MRI Analysis for Duchenne Muscular Dystrophy"
+              : diagnosisType === "MS"
+                ? "AI-Powered MRI Analysis for Brain Tumor Detection"
+                : "AI-Powered MRI Analysis"}
+          </div>
 
           {/* unhide buutton */}
           <button
@@ -317,25 +329,21 @@ export default function UploadDetailsPage() {
                     <div className="biomarker-status status-normal">Normal</div>
                   </div>
                 )}
-              </div>
-
-              <div className="tab-navigation" style={{ marginBottom: "25px" }}>
-                {activeTab === "leg-analysis" && (
-                  <button
-                    className="tab-btn"
-                    data-tab="dixon-imaging"
-                  >
-                    {uploadInfo?.image_type || "Dixon Imaging Study"}
-                  </button>
-                )}
-                {activeTab === "dixon-imaging" && (
-                  <button
-                    className="tab-btn"
-                    data-tab="leg-analysis"
-                  >
-                    Lower Leg Analysis
-                  </button>
-                )}
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-normal">2,834,259</div>
+                  <div className="biomarker-label">Total Voxels</div>
+                  <div className="biomarker-status status-normal">Segmentation</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-mild">1,116</div>
+                  <div className="biomarker-label">MS Lesion Voxels (class 18)</div>
+                  <div className="biomarker-status status-mild">Detected</div>
+                </div>
+                <div className="biomarker-card">
+                  <div className="biomarker-value value-moderate">0.04%</div>
+                  <div className="biomarker-label">Lesion Volume</div>
+                  <div className="biomarker-status status-moderate">Relative</div>
+                </div>
               </div>
 
               <div className="tab-content">
@@ -389,7 +397,7 @@ export default function UploadDetailsPage() {
                               onClick={() => setIsMuscleAbbrVisible(v => !v)}
                               aria-label={isMuscleAbbrVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>Muscle Abbreviations</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Brain Lesions</span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -417,7 +425,7 @@ export default function UploadDetailsPage() {
                               onClick={() => setIsHealthyControlVisible(v => !v)}
                               aria-label={isHealthyControlVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>Healthy Control</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Fat %</span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -430,8 +438,8 @@ export default function UploadDetailsPage() {
                               <div>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px", gap: "8px", padding: "6px 0", borderBottom: "1px solid #3f3f52", fontSize: "10px", color: "#9aa0a6", fontWeight: 600 }}>
                                   <div>Muscle</div>
-                                  <div style={{ textAlign: "center" }}>Fat %</div>
-                                  <div style={{ textAlign: "center" }}>T₂ Time</div>
+                                  <div style={{ textAlign: "center" }}>Healthy Control</div>
+                                  <div style={{ textAlign: "center" }}>DMD Patient</div>
                                 </div>
                                 <div className="muscle-data-item">
                                   <div className="muscle-name">Tibialis Anterior</div>
@@ -467,7 +475,7 @@ export default function UploadDetailsPage() {
                             <div
                               style={sectionHeaderStyle}
                               onClick={() => setIsDmdPatientVisible(v => !v)}
-                              aria-label={isDmdPatientVisible ? "Скрыть" : "Показать"}
+                              aria-label={isDmdPatientVisible ? "Hide" : "Show"}
                             >
                               <span style={{ fontWeight: 600, fontSize: 14 }}>DMD Patient</span>
                               <span style={{
@@ -491,8 +499,8 @@ export default function UploadDetailsPage() {
                                   fontWeight: 600
                                 }}>
                                   <div>Muscle</div>
-                                  <div style={{ textAlign: "center" }}>Fat %</div>
-                                  <div style={{ textAlign: "center" }}>T₂ Time</div>
+                                  <div style={{ textAlign: "center" }}>Healthy Control</div>
+                                  <div style={{ textAlign: "center" }}>DMD Patient</div>
                                 </div>
                                 <div className="muscle-data-item">
                                   <div className="muscle-name">Tibialis Anterior</div>
