@@ -24,6 +24,7 @@ export default function UploadDetailsPage() {
 
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
   const [uploadInfo, setUploadInfo] = useState<{ image_type?: string } | null>(null);
+  const [expandedLesion, setExpandedLesion] = useState<string | null>(null);
 
   const params = useParams();
   const uploadId = params.id as string;
@@ -280,7 +281,7 @@ export default function UploadDetailsPage() {
                   <div className="value">{diagnosisType === "DMD" ? "Late Ambulatory" : diagnosisType === "MS" ? "Ambulatory" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
-                  <div className="label">Steroid Treatment</div>
+                  <div className="label">Steroid</div>
                   <div className="value">{diagnosisType === "DMD" ? "Deflazacort" : diagnosisType === "MS" ? "None" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
@@ -302,21 +303,25 @@ export default function UploadDetailsPage() {
               </div>
 
               <div className="biomarkers-grid">
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-moderate">42%</div>
-                  <div className="biomarker-label">Fat Fraction</div>
-                  <div className="biomarker-status status-moderate">Moderate</div>
-                </div>
+                {diagnosisType === "DMD" && (
+                  <div className="biomarker-card">
+                    <div className="biomarker-value value-moderate">42%</div>
+                    <div className="biomarker-label">Fat Fraction</div>
+                    <div className="biomarker-status status-moderate">Moderate</div>
+                  </div>
+                )}
                 <div className="biomarker-card">
                   <div className="biomarker-value value-severe">58ms</div>
                   <div className="biomarker-label">T₂ Relaxation</div>
                   <div className="biomarker-status status-severe">Elevated</div>
                 </div>
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-mild">347cm²</div>
-                  <div className="biomarker-label">Muscle Volume</div>
-                  <div className="biomarker-status status-mild">Reduced</div>
-                </div>
+                {diagnosisType === "DMD" && (
+                  <div className="biomarker-card">
+                    <div className="biomarker-value value-mild">347cm²</div>
+                    <div className="biomarker-label">Muscle Volume</div>
+                    <div className="biomarker-status status-mild">Reduced</div>
+                  </div>
+                )}
                 <div className="biomarker-card">
                   <div className="biomarker-value value-mild">3.2</div>
                   <div className="biomarker-label">Edema Score</div>
@@ -407,13 +412,150 @@ export default function UploadDetailsPage() {
                               }}>▶</span>
                             </div>
                             {isMuscleAbbrVisible && (
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11px" }}>
-                                <div style={{ color: "#9aa0a6" }}>TA = Tibialis Anterior</div>
-                                <div style={{ color: "#9aa0a6" }}>TP = Tibialis Posterior</div>
-                                <div style={{ color: "#9aa0a6" }}>Fib = Fibularis</div>
-                                <div style={{ color: "#9aa0a6" }}>Sol = Soleus</div>
-                                <div style={{ color: "#9aa0a6" }}>MG = Medial Gastrocnemius</div>
-                                <div style={{ color: "#9aa0a6" }}>LG = Lateral Gastrocnemius</div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                {/* TA - Tibialis Anterior */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'TA' ? null : 'TA')}
+                                  >
+                                    <span>TA - Tibialis Anterior</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'TA' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'TA' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Dorsiflexion of the foot and inversion</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 5-15%, T2: 28-35ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 30%, T2 48ms</p>
+                                      <p><strong>Clinical significance:</strong> Elevated values indicate muscle degeneration and inflammation, affecting walking and balance.</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* TP - Tibialis Posterior */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'TP' ? null : 'TP')}
+                                  >
+                                    <span>TP - Tibialis Posterior</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'TP' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'TP' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Plantar flexion and inversion of foot, arch support</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-37ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 32%, T2 48ms</p>
+                                      <p><strong>Clinical significance:</strong> Critical for maintaining foot arch and preventing flat foot deformity.</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Fib - Fibularis */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'Fib' ? null : 'Fib')}
+                                  >
+                                    <span>Fib - Fibularis</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'Fib' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'Fib' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Eversion of foot and lateral stability</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 6-16%, T2: 28-34ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 68%, T2 72ms</p>
+                                      <p><strong>Clinical significance:</strong> Severely affected - high risk of ankle instability and falls.</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Sol - Soleus */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'Sol' ? null : 'Sol')}
+                                  >
+                                    <span>Sol - Soleus</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'Sol' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'Sol' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Plantar flexion, important for standing and walking</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 10-20%, T2: 32-38ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 55%, T2 65ms</p>
+                                      <p><strong>Clinical significance:</strong> Moderate involvement affecting push-off phase during walking.</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* MG - Medial Gastrocnemius */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'MG' ? null : 'MG')}
+                                  >
+                                    <span>MG - Medial Gastrocnemius</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'MG' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'MG' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Plantar flexion and knee flexion</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-36ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 71%, T2 77ms</p>
+                                      <p><strong>Clinical significance:</strong> Severely affected - major impact on walking and standing endurance.</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* LG - Lateral Gastrocnemius */}
+                                <div style={lesionItemStyle}>
+                                  <div 
+                                    style={lesionHeaderStyle}
+                                    onClick={() => setExpandedLesion(expandedLesion === 'LG' ? null : 'LG')}
+                                  >
+                                    <span>LG - Lateral Gastrocnemius</span>
+                                    <span style={{
+                                      fontSize: 12,
+                                      color: "#9aa0a6",
+                                      transform: expandedLesion === 'LG' ? "rotate(90deg)" : "rotate(0deg)",
+                                      transition: "transform 0.2s"
+                                    }}>▶</span>
+                                  </div>
+                                  {expandedLesion === 'LG' && (
+                                    <div style={lesionDescriptionStyle}>
+                                      <p><strong>Function:</strong> Plantar flexion and knee flexion</p>
+                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-36ms</p>
+                                      <p><strong>Current reading:</strong> Fat fraction 34%, T2 44ms</p>
+                                      <p><strong>Clinical significance:</strong> Moderately affected but better preserved than medial head.</p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -425,7 +567,7 @@ export default function UploadDetailsPage() {
                               onClick={() => setIsHealthyControlVisible(v => !v)}
                               aria-label={isHealthyControlVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>Fat %</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>Lesion %</span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -587,7 +729,7 @@ export default function UploadDetailsPage() {
                                   <div className="info-value">Chemical shift-encoded MRI separating water/fat signals</div>
                                 </div>
                                 <div className="info-item">
-                                  <div className="info-label">Fat Fraction</div>
+                                  <div className="info-label">Lesion %</div>
                                   <div className="info-value">Quantitative % intramuscular fat</div>
                                 </div>
                                 <div className="info-item">
@@ -888,3 +1030,30 @@ export default function UploadDetailsPage() {
     </ProtectedRoute>
   );
 }
+
+const lesionItemStyle = {
+  background: "#0f1117",
+  border: "1px solid #2d3142",
+  borderRadius: "6px",
+  padding: "8px",
+  cursor: "pointer"
+};
+
+const lesionHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  fontSize: "12px",
+  color: "#e8eaed",
+  fontWeight: 500
+};
+
+const lesionDescriptionStyle = {
+  marginTop: "8px",
+  padding: "8px",
+  background: "#1a1d29",
+  borderRadius: "4px",
+  fontSize: "11px",
+  color: "#9aa0a6",
+  lineHeight: 1.4
+};

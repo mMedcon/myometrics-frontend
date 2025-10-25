@@ -89,7 +89,7 @@ export default function UploadPage() {
                   className="text-sci-blue"
                 />
                 <div>
-                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>Tumor Detection</h3>
+                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>MS</h3>
                   <p className="text-sm text-muted">
                     Brain tumor identification and classification
                   </p>
