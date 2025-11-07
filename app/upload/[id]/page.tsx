@@ -230,7 +230,7 @@ export default function UploadDetailsPage() {
               ? "DMD Monitor"
               : diagnosisType === "MS"
                 ? "Tumor Monitor"
-                : "Monitor"}
+                : "MS Monitor"}
           </h1>
           <div className="subtitle">
             {diagnosisType === "DMD"
@@ -306,7 +306,7 @@ export default function UploadDetailsPage() {
                 {diagnosisType === "DMD" && (
                   <div className="biomarker-card">
                     <div className="biomarker-value value-moderate">42%</div>
-                    <div className="biomarker-label">Fat Fraction</div>
+                    <div className="biomarker-label">Lesion %</div>
                     <div className="biomarker-status status-moderate">Moderate</div>
                   </div>
                 )}
@@ -338,11 +338,6 @@ export default function UploadDetailsPage() {
                   <div className="biomarker-value value-normal">2,834,259</div>
                   <div className="biomarker-label">Total Voxels</div>
                   <div className="biomarker-status status-normal">Segmentation</div>
-                </div>
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-mild">1,116</div>
-                  <div className="biomarker-label">MS Lesion Voxels (class 18)</div>
-                  <div className="biomarker-status status-mild">Detected</div>
                 </div>
                 <div className="biomarker-card">
                   <div className="biomarker-value value-moderate">0.04%</div>
@@ -402,7 +397,9 @@ export default function UploadDetailsPage() {
                               onClick={() => setIsMuscleAbbrVisible(v => !v)}
                               aria-label={isMuscleAbbrVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>Brain Lesions</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>
+                                {diagnosisType === "DMD" ? "Muscle Analysis" : "Brain Lesions"}
+                              </span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -413,149 +410,301 @@ export default function UploadDetailsPage() {
                             </div>
                             {isMuscleAbbrVisible && (
                               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                {/* TA - Tibialis Anterior */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'TA' ? null : 'TA')}
-                                  >
-                                    <span>TA - Tibialis Anterior</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'TA' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'TA' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Dorsiflexion of the foot and inversion</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 5-15%, T2: 28-35ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 30%, T2 48ms</p>
-                                      <p><strong>Clinical significance:</strong> Elevated values indicate muscle degeneration and inflammation, affecting walking and balance.</p>
+                                {diagnosisType === "DMD" ? (
+                                  // Muscle Analysis для DMD
+                                  <>
+                                    {/* VL - Vastus Lateralis */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'VL' ? null : 'VL')}
+                                      >
+                                        <span>VL - Vastus Lateralis (65%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'VL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'VL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Knee extension, gait stability</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 5-15%, T2: 28-35ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 65%, T2 68ms</p>
+                                          <p><strong>Clinical significance:</strong> Severely affected - major impact on walking ability and stair climbing.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* TP - Tibialis Posterior */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'TP' ? null : 'TP')}
-                                  >
-                                    <span>TP - Tibialis Posterior</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'TP' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'TP' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Plantar flexion and inversion of foot, arch support</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-37ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 32%, T2 48ms</p>
-                                      <p><strong>Clinical significance:</strong> Critical for maintaining foot arch and preventing flat foot deformity.</p>
+                                    {/* RF - Rectus Femoris */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'RF' ? null : 'RF')}
+                                      >
+                                        <span>RF - Rectus Femoris (72%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'RF' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'RF' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Knee extension, hip flexion</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 8-18%, T2: 30-36ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 72%, T2 75ms</p>
+                                          <p><strong>Clinical significance:</strong> Critically affected - loss of functional capacity imminent.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* Fib - Fibularis */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'Fib' ? null : 'Fib')}
-                                  >
-                                    <span>Fib - Fibularis</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'Fib' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'Fib' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Eversion of foot and lateral stability</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 6-16%, T2: 28-34ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 68%, T2 72ms</p>
-                                      <p><strong>Clinical significance:</strong> Severely affected - high risk of ankle instability and falls.</p>
+                                    {/* BF - Biceps Femoris */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'BF' ? null : 'BF')}
+                                      >
+                                        <span>BF - Biceps Femoris (58%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'BF' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'BF' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Knee flexion, hip extension</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 6-16%, T2: 28-34ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 58%, T2 62ms</p>
+                                          <p><strong>Clinical significance:</strong> Moderately to severely affected - compensatory gait patterns developing.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* Sol - Soleus */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'Sol' ? null : 'Sol')}
-                                  >
-                                    <span>Sol - Soleus</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'Sol' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'Sol' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Plantar flexion, important for standing and walking</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 10-20%, T2: 32-38ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 55%, T2 65ms</p>
-                                      <p><strong>Clinical significance:</strong> Moderate involvement affecting push-off phase during walking.</p>
+                                    {/* ADD - Adductor Group */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'ADD' ? null : 'ADD')}
+                                      >
+                                        <span>ADD - Adductor Group (45%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'ADD' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'ADD' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Hip adduction, pelvic stability</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 8-18%, T2: 30-37ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 45%, T2 55ms</p>
+                                          <p><strong>Clinical significance:</strong> Moderately affected - monitor for progression to critical threshold.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* MG - Medial Gastrocnemius */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'MG' ? null : 'MG')}
-                                  >
-                                    <span>MG - Medial Gastrocnemius</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'MG' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'MG' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Plantar flexion and knee flexion</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-36ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 71%, T2 77ms</p>
-                                      <p><strong>Clinical significance:</strong> Severely affected - major impact on walking and standing endurance.</p>
+                                    {/* SAR - Sartorius */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'SAR' ? null : 'SAR')}
+                                      >
+                                        <span>SAR - Sartorius (18%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'SAR' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'SAR' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Hip flexion, knee flexion, hip external rotation</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 5-15%, T2: 28-35ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 18%, T2 38ms</p>
+                                          <p><strong>Clinical significance:</strong> Relatively spared - good compensatory potential maintained.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* LG - Lateral Gastrocnemius */}
-                                <div style={lesionItemStyle}>
-                                  <div 
-                                    style={lesionHeaderStyle}
-                                    onClick={() => setExpandedLesion(expandedLesion === 'LG' ? null : 'LG')}
-                                  >
-                                    <span>LG - Lateral Gastrocnemius</span>
-                                    <span style={{
-                                      fontSize: 12,
-                                      color: "#9aa0a6",
-                                      transform: expandedLesion === 'LG' ? "rotate(90deg)" : "rotate(0deg)",
-                                      transition: "transform 0.2s"
-                                    }}>▶</span>
-                                  </div>
-                                  {expandedLesion === 'LG' && (
-                                    <div style={lesionDescriptionStyle}>
-                                      <p><strong>Function:</strong> Plantar flexion and knee flexion</p>
-                                      <p><strong>Normal values:</strong> Fat fraction: 8-18%, T2: 30-36ms</p>
-                                      <p><strong>Current reading:</strong> Fat fraction 34%, T2 44ms</p>
-                                      <p><strong>Clinical significance:</strong> Moderately affected but better preserved than medial head.</p>
+                                    {/* GRA - Gracilis */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'GRA' ? null : 'GRA')}
+                                      >
+                                        <span>GRA - Gracilis (22%)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'GRA' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'GRA' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Hip adduction, knee flexion</p>
+                                          <p><strong>Normal values:</strong> Lesion %: 6-16%, T2: 28-34ms</p>
+                                          <p><strong>Current reading:</strong> Lesion % 22%, T2 42ms</p>
+                                          <p><strong>Clinical significance:</strong> Mildly affected - preserve function through targeted therapy.</p>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
+                                  </>
+                                ) : (
+                                  // Brain Lesions для MS
+                                  <>
+                                    {/* FL - Frontal Lobe */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'FL' ? null : 'FL')}
+                                      >
+                                        <span>FL - Frontal Lobe</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'FL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'FL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Executive functions, personality, motor control</p>
+                                          <p><strong>Normal values:</strong> No lesions, uniform signal intensity</p>
+                                          <p><strong>Current reading:</strong> 3 hyperintense lesions detected</p>
+                                          <p><strong>Clinical significance:</strong> May affect cognitive function and executive abilities.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* PL - Parietal Lobe */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'PL' ? null : 'PL')}
+                                      >
+                                        <span>PL - Parietal Lobe</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'PL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'PL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Sensory processing, spatial awareness, language</p>
+                                          <p><strong>Normal values:</strong> Homogeneous appearance, no signal abnormalities</p>
+                                          <p><strong>Current reading:</strong> 2 small lesions in white matter</p>
+                                          <p><strong>Clinical significance:</strong> Potential impact on sensory integration and spatial processing.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* TL - Temporal Lobe */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'TL' ? null : 'TL')}
+                                      >
+                                        <span>TL - Temporal Lobe</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'TL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'TL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Memory, auditory processing, language comprehension</p>
+                                          <p><strong>Normal values:</strong> Normal hippocampal volume, no lesions</p>
+                                          <p><strong>Current reading:</strong> 1 lesion near hippocampus</p>
+                                          <p><strong>Clinical significance:</strong> May affect memory formation and language processing.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* OL - Occipital Lobe */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'OL' ? null : 'OL')}
+                                      >
+                                        <span>OL - Occipital Lobe</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'OL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'OL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Visual processing and interpretation</p>
+                                          <p><strong>Normal values:</strong> Clear visual cortex, no signal abnormalities</p>
+                                          <p><strong>Current reading:</strong> No lesions detected</p>
+                                          <p><strong>Clinical significance:</strong> Visual function preserved.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* BS - Brainstem */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'BS' ? null : 'BS')}
+                                      >
+                                        <span>BS - Brainstem</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'BS' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'BS' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Vital functions, cranial nerves, consciousness</p>
+                                          <p><strong>Normal values:</strong> Intact structure, no signal changes</p>
+                                          <p><strong>Current reading:</strong> 1 small lesion in pons</p>
+                                          <p><strong>Clinical significance:</strong> Monitor for symptoms affecting balance or cranial nerve function.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* CB - Cerebellum */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'CB' ? null : 'CB')}
+                                      >
+                                        <span>CB - Cerebellum</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'CB' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'CB' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Function:</strong> Motor coordination, balance, fine motor control</p>
+                                          <p><strong>Normal values:</strong> Symmetric appearance, no atrophy</p>
+                                          <p><strong>Current reading:</strong> No lesions, normal morphology</p>
+                                          <p><strong>Clinical significance:</strong> Motor coordination function preserved.</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
@@ -849,11 +998,6 @@ export default function UploadDetailsPage() {
                           <div style={sectionCardStyle}>
                             <div style={sectionHeaderStyle}>
                               <span style={{ fontWeight: 600, fontSize: 14 }}>Segmentation Statistics</span>
-                            </div>
-                            <div style={{ color: "#9aa0a6", fontSize: 13, padding: "10px 0" }}>
-                              <div>Total voxels: 2,834,259</div>
-                              <div>MS Lesion voxels (class 18): 1,116</div>
-                              <div>Lesion volume: 0.04%</div>
                             </div>
                           </div>
                         </div>
