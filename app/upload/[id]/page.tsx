@@ -229,7 +229,7 @@ export default function UploadDetailsPage() {
             {diagnosisType === "DMD"
               ? "DMD Monitor"
               : diagnosisType === "MS"
-                ? "Tumor Monitor"
+                ? "MS Monitor"
                 : "MS Monitor"}
           </h1>
           <div className="subtitle">
