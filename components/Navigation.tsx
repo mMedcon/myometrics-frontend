@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import {IconKeys} from "next/dist/lib/metadata/constants";
+import ChatWindow from "@/components/ChatWindow";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -191,19 +192,9 @@ export default function Navigation({ children }: NavigationProps) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl flex space-x-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl space-x-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
-        <div className="bg-amber-50 w-1/4 h-150 fixed right-10 top-50 chat-container flex-col rounded-lg">
-            <h1 className="bg-gray-500 rounded-t-lg p-3 text-xl">Ask AI</h1>
-            <div className="h-5/6"></div>
-            <div className="bg-gray-500 rounded-b-lg p-3 text-xl flex-row">
-              <input placeholder="Ask.." className="mr-20"/>
-              <button>A</button>
-            </div>
-          {/*<button className="btn-primary">*/}
-          {/*  0*/}
-          {/*</button>*/}
-        </div>
+        <ChatWindow />
       </main>
     </div>
   );
