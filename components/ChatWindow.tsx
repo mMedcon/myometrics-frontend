@@ -1,14 +1,27 @@
-import { AArrowDown, BotMessageSquare, Minus, SendHorizontal, Square } from "lucide-react";
-import { useState, useEffect } from "react";
-import { GoogleGenAI } from "@google/genai";
+import {BotMessageSquare, Minus, SendHorizontal, Square} from "lucide-react";
+import {useEffect, useRef, useState} from "react";
+import ReactMarkdown from "react-markdown";
+
+type Message = {
+    id: number;
+    message: string;
+    reply: string | null;
+}
 
 const ChatWindow = () => {
     let [open, setOpen] = useState(false);
     let [maximized, setMaximized] = useState(false);
     let [input, setInput] = useState("");
     let [messages, setMessages] = useState(Array.from(JSON.parse(localStorage.getItem("message") as string)));
+    const win = useRef<HTMLDivElement>(null);
 
-    async function sendPrompt(message: string): Promise<void> {
+    useEffect(() => {
+        if (open && win.current) {
+            win.current.scrollTop = win.current.scrollHeight;
+        }
+    }, [open, messages]);
+
+    async function sendPrompt(message: Message): Promise<void> {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
             {
                 method: "POST",
@@ -21,7 +34,7 @@ const ChatWindow = () => {
                         {
                             "parts": [
                                 {
-                                    "text": message,
+                                    "text": message.message,
                                 }
                             ]
                         }
@@ -30,24 +43,30 @@ const ChatWindow = () => {
             }
         );
         const data = await response.json();
-        console.log(data?.candidates?.[0]?.content?.parts?.[0]?.text);
-        setMessages((prev: string[]) => {
-            let updated = [...prev, data?.candidates?.[0]?.content?.parts?.[0]?.text];
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        setMessages(prev => {
+            const updated: Message[] = prev.map(m =>
+                m.id === message.id ? { ...m, reply } : m
+            );
             localStorage.setItem("message", JSON.stringify(updated));
             return updated;
         });
-        // return response.text
     }
 
     async function SendMessage(message: string): void {
-        if (!message.trim()) return; // prevent empty messages
-        setMessages((prev: string[]) => {
-            let updated = [...prev, message];
+        if (!message.trim()) return;
+        setMessages((prev: Message[]) => {
+            let updated = [...prev, {
+                message,
+                id: messages.length,
+                reply: "",
+            }];
             localStorage.setItem("message", JSON.stringify(updated));
             return updated;
         });
         setInput("");
-        await sendPrompt(message);
+        await sendPrompt({ message, id: messages.length, reply: "" });
     }
 
     useEffect(() => {
@@ -62,7 +81,6 @@ const ChatWindow = () => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [input]);
-
     return (
         <>
             <div
@@ -88,16 +106,25 @@ const ChatWindow = () => {
                     </div>
                 </div>
 
-                <div className="p-10 flex flex-col overflow-y-scroll" id="lol" style={{height: 'calc(100% - 110px)', alignItems: 'end'}}>
-                    {messages.map((message, i) => (
-                        <div key={i} className="mb-3 px-4 py-2 rounded-lg text-right border-2 w-fit" style={{ backgroundColor: 'var(--primary)', borderColor: 'var(--border)' }}>
-                            {message as string}
-                        </div>
-                    ))}
+                <div className="p-3 flex flex-col overflow-y-scroll" id="lol" style={{height: 'calc(100% - 105px)'}} ref={win}>
+                    { (messages.map((message: {message: string, id: number, reply: string}, index:number )  => {
+                        return (
+                        <>
+                            <div key={index} className="mb-3 px-4 py-2 rounded-lg text-right border-2 w-fit"
+                                 style={{backgroundColor: 'var(--primary)', borderColor: 'var(--border)', alignSelf: 'end'}}>
+                                {message.message as string}
+                            </div>
+                            <div key={index+1} className="mb-3 px-4 py-2 rounded-lg text-left border-2 w-fit"
+                                 style={{backgroundColor: 'var(--sci-cyan)', borderColor: 'var(--border)', alignSelf: 'start'}}>
+                                <ReactMarkdown>{message.reply as string}</ReactMarkdown>
+                            </div>
+                        </>
+                        )
+                    }))}
                 </div>
 
                 <div
-                    className="rounded-b-lg p-3 text-xl flex-row items-center justify-center absolute bottom-0 w-full border`-2"
+                    className="rounded-b-lg p-3 text-xl flex-row items-center justify-center absolute bottom-0 w-full border-2"
                     style={{ backgroundColor: 'var(--primary)', borderColor: 'var(--border)' }}
                 >
                     <input
