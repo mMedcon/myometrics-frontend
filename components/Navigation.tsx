@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import {IconKeys} from "next/dist/lib/metadata/constants";
+import ChatWindow from "@/components/ChatWindow";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -190,8 +192,9 @@ export default function Navigation({ children }: NavigationProps) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl space-x-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
+        <ChatWindow />
       </main>
     </div>
   );
