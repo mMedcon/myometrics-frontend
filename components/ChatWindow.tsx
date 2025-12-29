@@ -12,9 +12,27 @@ const ChatWindow = () => {
     let [open, setOpen] = useState(false);
     let [maximized, setMaximized] = useState(false);
     let [input, setInput] = useState("");
-    let [messages, setMessages] = useState<Message[]>(Array.from(JSON.parse(localStorage.getItem("message") as string || "[]")));
+    let [messages, setMessages] = useState<Message[]>([]);
     let [showClinicalButtons, setShowClinicalButtons] = useState(false);
     const win = useRef<HTMLDivElement>(null);
+
+    // Load messages from localStorage only on the client side
+    useEffect(() => {
+        // Check if window is defined (we're in the browser)
+        if (typeof window !== 'undefined') {
+            const storedMessages = localStorage.getItem("message");
+            if (storedMessages) {
+                try {
+                    const parsedMessages = JSON.parse(storedMessages);
+                    setMessages(Array.from(parsedMessages));
+                } catch (e) {
+                    console.error("Failed to parse stored messages:", e);
+                    // If parsing fails, use empty array
+                    setMessages([]);
+                }
+            }
+        }
+    }, []);
 
     useEffect(() => {
         if (open && win.current) {
@@ -123,7 +141,7 @@ const ChatWindow = () => {
                 </div>
 
                 <div className="p-3 flex flex-col overflow-y-scroll" id="lol" style={{height: 'calc(100% - 105px)'}} ref={win}>
-                    { (messages.map((message: {message: string, id: number, reply: string}, index:number )  => {
+                    { (messages.map((message: Message, index:number )  => {
                         return (
                         <>
                             <div key={index} className="mb-3 px-4 py-2 rounded-lg text-right border-2 w-fit"
