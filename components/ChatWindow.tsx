@@ -13,6 +13,7 @@ const ChatWindow = () => {
     let [maximized, setMaximized] = useState(false);
     let [input, setInput] = useState("");
     let [messages, setMessages] = useState(Array.from(JSON.parse(localStorage.getItem("message") as string)));
+    let [showClinicalButtons, setShowClinicalButtons] = useState(false);
     const win = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -66,14 +67,29 @@ const ChatWindow = () => {
             return updated;
         });
         setInput("");
+        setShowClinicalButtons(false);
         await sendPrompt({ message, id: messages.length, reply: "" });
+    }
+    
+    function handleClinicalTrialsClick() {
+        // TODO: should be redirected to view the actual data
+        SendMessage("I want to learn about clinical trials");
+    }
+    
+    function handleRadialClick() {
+        // TODO: should be redirected to view the actual data
+        SendMessage("I want to learn about radial");
     }
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === "Enter") {
                 if (input.trim() !== "") {
-                    SendMessage(input);
+                    if (input.toLowerCase().includes("clinical trials")) {
+                        setShowClinicalButtons(true);
+                    } else {
+                        SendMessage(input);
+                    }
                 }
             }
         }
@@ -129,10 +145,33 @@ const ChatWindow = () => {
                 >
                     <input
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={(e) => {
+                            const newValue = e.target.value;
+                            setInput(newValue);
+                            setShowClinicalButtons(newValue.toLowerCase().includes("clinical trials"));
+                        }}
                         placeholder="Ask.."
                         className="w-10/11"
                     />
+
+                    {showClinicalButtons && (
+                        <div className="absolute top-[-60px] left-0 right-0 flex justify-center gap-4 p-2 bg-opacity-90" style={{ backgroundColor: 'var(--card-background)' }}>
+                            <button 
+                                className="px-3 py-1 rounded-md text-sm font-medium" 
+                                style={{ backgroundColor: 'var(--primary)', borderColor: 'var(--border)', border: '1px solid' }}
+                                onClick={handleClinicalTrialsClick}
+                            >
+                                Clinical Trials
+                            </button>
+                            <button 
+                                className="px-3 py-1 rounded-md text-sm font-medium" 
+                                style={{ backgroundColor: 'var(--primary)', borderColor: 'var(--border)', border: '1px solid' }}
+                                onClick={handleRadialClick}
+                            >
+                                Radial
+                            </button>
+                        </div>
+                    )}
 
                     <button
                         className="absolute right-3"
