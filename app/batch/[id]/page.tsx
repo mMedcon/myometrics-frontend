@@ -194,6 +194,13 @@ export default function BatchResultsPage() {
                           >
                             {index + 1}
                           </span>
+                          <img
+                            src={microserviceAPI.getUploadPreviewUrl(file.upload_id)}
+                            alt={file.filename}
+                            className="w-16 h-16 object-cover rounded border"
+                            style={{ background: '#f3f3f3' }}
+                            onError={e => { e.currentTarget.src = '/default-preview.png'; }}
+                          />
                           <div>
                             <h3 className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                               {file.filename}

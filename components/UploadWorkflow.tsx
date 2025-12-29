@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api';
+import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api/microservice';
 
 interface UploadProgress {
   percentage: number;
@@ -11,11 +11,12 @@ interface UploadProgress {
 
 interface UploadWorkflowProps {
   detectionType: 'dmd' | 'tumor';
+  imageType: "MS" | "DMD" | "";
   onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
   onUploadAttempt?: () => void;
 }
 
-export default function UploadWorkflow({ detectionType, onUploadComplete,onUploadAttempt }: UploadWorkflowProps) {
+export default function UploadWorkflow({ detectionType, imageType, onUploadComplete, onUploadAttempt }: UploadWorkflowProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -50,7 +51,7 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
           setUploadProgress(parsed);
         }
       } catch (e) {
-        console.error("Ошибка парсинга uploadProgress", e);
+        console.error("Parsing error in uploadProgress", e);
       }
     }
   }, []); 
@@ -314,11 +315,10 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
   useEffect(() => {
     const saved = localStorage.getItem("savedFiles");
     if (saved) {
-      setSelectedFiles(JSON.parse(saved)); // selectedFiles будет массив объектов {name, size}
+      setSelectedFiles(JSON.parse(saved)); 
     }
   }, []);
-
-
+  
   const handleFileSelection = (files: File[]) => {
   if (files.length === 1) {
     const validation = microserviceAPI.validateFile(files[0]);
@@ -328,9 +328,9 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
     }
     setIsBatchMode(false);
     } else {
-      const validation = microserviceAPI.validateBatchFiles(files);
-      if (!validation.valid) {
-        setError(validation.errors.join(', '));
+      const invalidFiles = files.filter(f => !microserviceAPI.validateFile(f).valid);
+      if (invalidFiles.length > 0) {
+        setError('Some files are invalid for upload.');
         return;
       }
       setIsBatchMode(true);
@@ -348,6 +348,10 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
 
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
+    if (!imageType) {
+      setError("Please select diagnosis type (MS or DMD).");
+      return;
+    }
 
     // Call validation from parent component
     if (onUploadAttempt) {
@@ -374,9 +378,11 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
         
       } else {
         // Single file upload
-        const result = await microserviceAPI.uploadFile(selectedFiles[0], (progress) => {
-          setUploadProgress({ percentage: progress, stage: 'uploading' });
-        });
+        const result = await microserviceAPI.uploadFile(
+          selectedFiles[0],
+          (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
+          imageType // <-- теперь это из пропсов
+        );
 
         setUploadResult(result);
         setUploadProgress({ percentage: 100, stage: 'analyzing' });
@@ -434,10 +440,14 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
         setSelectedFiles(parsed);
         setHidePanel(true);
       } catch (e) {
-        console.error("Ошибка парсинга savedFiles", e);
+        console.error("Parsing error of savedFiles", e);
       }
     }
 }, []);
+
+ const handleViewDetails = (uploadId: string) => {
+    router.push(`/upload/${uploadId}`);
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -477,6 +487,7 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
     }
   }
 }, []);
+
 
   return (
     <div className="space-y-6">
@@ -737,8 +748,10 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
             )}
 
             <p className="text-sm text-muted">
-                <button
-                onClick={() => router.push("/mockupui")}
+              <button
+                onClick={() => handleViewDetails(
+                  batchResult ? batchResult.batch_id : uploadResult?.upload_id ?? ''
+                )}
                 className="btn-primary w-full"
               >
                 {'Redirect to the results page'}
@@ -762,6 +775,25 @@ export default function UploadWorkflow({ detectionType, onUploadComplete,onUploa
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Diagnosis Type Selection */}
+      {selectedFiles.length > 0 && (
+        <div className="mb-4">
+          {/*
+          <select
+            id="imageType"
+            value={imageType}
+            onChange={e => setImageType(e.target.value as "MS" | "DMD" | "")}
+            className="border rounded px-3 py-2 w-full"
+            required
+          >
+            <option value="">Select diagnosis</option>
+            <option value="MS">MS - Multiple Sclerosis</option>
+            <option value="DMD">DMD - Duchenne Muscular Dystrophy</option>
+          </select>
+          */}
         </div>
       )}
     </div>

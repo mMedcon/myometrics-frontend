@@ -7,6 +7,7 @@ import UploadWorkflow from '@/components/UploadWorkflow';
 export default function UploadPage() {
   const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
   const [error, setError] = useState('');
+   const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
 
     // Function to validate detection type selection
   const handleUploadAttempt = () => {
@@ -21,7 +22,8 @@ export default function UploadPage() {
   // Clear error when user makes a selection
   const handleDetectionSelection = (type: 'dmd' | 'tumor') => {
     setSelectedDetection(type);
-    setError(''); // Clear error when user selects a type
+    setImageType(type === 'dmd' ? 'DMD' : 'MS');
+    setError('');
   };
 
   return (
@@ -49,7 +51,7 @@ export default function UploadPage() {
                   ? 'border-sci-blue bg-sci-blue bg-opacity-10' 
                   : 'border-gray-300 hover:border-sci-blue'
               }`}
-              onClick={() => handleDetectionSelection('dmd')}
+              onChange={e => setImageType((e.target as HTMLInputElement).value as "MS" | "DMD" | "")}
             >
               <div className="flex items-center space-x-3">
                 <input
@@ -87,7 +89,7 @@ export default function UploadPage() {
                   className="text-sci-blue"
                 />
                 <div>
-                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>Tumor Detection</h3>
+                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>MS</h3>
                   <p className="text-sm text-muted">
                     Brain tumor identification and classification
                   </p>
@@ -164,6 +166,7 @@ export default function UploadPage() {
         {selectedDetection && (
           <UploadWorkflow 
             detectionType={selectedDetection as 'dmd' | 'tumor'} 
+            imageType={imageType}
             onUploadAttempt={handleUploadAttempt}
           />
         )}
