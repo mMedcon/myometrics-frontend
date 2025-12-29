@@ -12,7 +12,7 @@ const ChatWindow = () => {
     let [open, setOpen] = useState(false);
     let [maximized, setMaximized] = useState(false);
     let [input, setInput] = useState("");
-    let [messages, setMessages] = useState(Array.from(JSON.parse(localStorage.getItem("message") as string)));
+    let [messages, setMessages] = useState<Message[]>(Array.from(JSON.parse(localStorage.getItem("message") as string || "[]")));
     let [showClinicalButtons, setShowClinicalButtons] = useState(false);
     const win = useRef<HTMLDivElement>(null);
 
@@ -47,7 +47,7 @@ const ChatWindow = () => {
         const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
         setMessages(prev => {
-            const updated: Message[] = prev.map(m =>
+            const updated: Message[] = prev.map((m: Message) =>
                 m.id === message.id ? { ...m, reply } : m
             );
             localStorage.setItem("message", JSON.stringify(updated));
@@ -55,7 +55,7 @@ const ChatWindow = () => {
         });
     }
 
-    async function SendMessage(message: string): void {
+    async function SendMessage(message: string): Promise<void> {
         if (!message.trim()) return;
         setMessages((prev: Message[]) => {
             let updated = [...prev, {
