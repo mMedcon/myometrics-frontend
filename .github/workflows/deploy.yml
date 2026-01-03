@@ -22,6 +22,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,7 +43,8 @@ jobs:
           # Add any environment variables needed for the build
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://api.example.com' }}
           NEXT_PUBLIC_MICROSERVICE_URL: ${{ secrets.NEXT_PUBLIC_MICROSERVICE_URL || 'https://microservice.example.com' }}
-          NEXT_PUBLIC_DEV_MODE: false
+          NEXT_PUBLIC_DEV_MODE: ${{ secrets.NEXT_PUBLIC_DEV_MODE || true }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY || 'example' }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
