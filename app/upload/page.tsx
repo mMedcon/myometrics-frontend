@@ -8,6 +8,7 @@ export default function UploadPage() {
   const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
   const [error, setError] = useState('');
    const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
+  const [activeTab, setActiveTab] = useState<'upload' | 'resources'>('upload');
 
     // Function to validate detection type selection
   const handleUploadAttempt = () => {
@@ -29,6 +30,24 @@ export default function UploadPage() {
   return (
     <Navigation>
       <div className="max-w-2xl mx-auto space-y-8">
+        {/* Tabs */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`px-3 py-1 rounded-md ${activeTab === 'upload' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Upload
+          </button>
+          <button
+            onClick={() => setActiveTab('resources')}
+            className={`px-3 py-1 rounded-md ${activeTab === 'resources' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Resources
+          </button>
+        </div>
+
+        {activeTab === 'upload' ? (
+          <>
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>
@@ -144,8 +163,8 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Clinical Workflow Notice */}
-        <div className="card" style={{ borderColor: 'var(--sci-blue)', backgroundColor: 'color-mix(in srgb, var(--sci-blue) 5%, transparent)' }}>
+  {/* Clinical Workflow Notice */}
+  <div className="card" style={{ borderColor: 'var(--sci-blue)', backgroundColor: 'color-mix(in srgb, var(--sci-blue) 5%, transparent)' }}>
           <div className="flex items-start space-x-3">
             <div className="w-6 h-6 mt-0.5 flex-shrink-0">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--sci-blue)' }}>
@@ -171,15 +190,35 @@ export default function UploadPage() {
             </div>
           </div>
         </div>
-
-       {/* Upload Workflow Component - Only show when detection type is selected */}
-        {selectedDetection && (
-          <UploadWorkflow 
-            detectionType={selectedDetection as 'dmd' | 'tumor'} 
-            imageType={imageType}
-            onUploadAttempt={handleUploadAttempt}
-          />
+          {/* Upload Workflow Component - Only show when detection type is selected */}
+          {selectedDetection && (
+            <UploadWorkflow 
+              detectionType={selectedDetection as 'dmd' | 'tumor'} 
+              imageType={imageType}
+              onUploadAttempt={handleUploadAttempt}
+            />
+          )}
+          </>
+        ) : (
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Resources</h2>
+            <p className="text-sm mb-2" style={{ color: 'var(--text)' }}>
+              Здесь собраны полезные ссылки и материалы по клиническим исследованиям и процессу проверки.
+            </p>
+            <a
+              href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sci-blue underline"
+            >
+              Подробнее о клинических исследованиях
+            </a>
+            <div className="mt-4 text-sm text-muted">
+              <p>Плейсхолдер для будущих материалов: инструкции, ссылки на документацию и пр.</p>
+            </div>
+          </div>
         )}
+
       </div>
     </Navigation>
   );
