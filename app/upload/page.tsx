@@ -8,7 +8,27 @@ export default function UploadPage() {
   const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
   const [error, setError] = useState('');
    const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
-  const [activeTab, setActiveTab] = useState<'upload' | 'resources'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'resources' | 'trials'>('upload');
+  
+  // Clinical trials state
+  const [clinicalTrials, setClinicalTrials] = useState<Array<{
+    id: string;
+    title: string;
+    description: string;
+    status: 'recruiting' | 'active' | 'completed';
+    startDate: string;
+    phase: string;
+    sponsor: string;
+  }>>([]);
+  
+  const [trialForm, setTrialForm] = useState({
+    title: '',
+    description: '',
+    status: 'recruiting' as const,
+    startDate: '',
+    phase: '',
+    sponsor: ''
+  });
 
     // Function to validate detection type selection
   const handleUploadAttempt = () => {
@@ -27,11 +47,60 @@ export default function UploadPage() {
     setError('');
   };
 
+  // Handle clinical trial form submission
+  const handleAddTrial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trialForm.title.trim() || !trialForm.description.trim()) {
+      return;
+    }
+    
+    const newTrial = {
+      id: Date.now().toString(),
+      ...trialForm,
+      startDate: trialForm.startDate || new Date().toISOString().split('T')[0]
+    };
+    
+    setClinicalTrials(prev => [...prev, newTrial]);
+    
+    // Reset form
+    setTrialForm({
+      title: '',
+      description: '',
+      status: 'recruiting',
+      startDate: '',
+      phase: '',
+      sponsor: ''
+    });
+    
+    // TODO: Send to API/database
+    console.log('New clinical trial added:', newTrial);
+  };
+
   return (
     <Navigation>
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Tabs */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`px-3 py-1 rounded-md ${activeTab === 'upload' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Upload
+          </button>
+          <a
+            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-sci-blue hover:text-white`}
+          >
+            Resources
+          </a>
+          <button
+            onClick={() => setActiveTab('trials')}
+            className={`px-3 py-1 rounded-md ${activeTab === 'trials' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Clinical Trials
+          </button>
         </div>
 
         
@@ -196,10 +265,11 @@ export default function UploadPage() {
             />
           )}
           </>
-        ) : (
+        ) : activeTab === 'resources' ? (
           <div className="card">
             <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Resources</h2>
             <p className="text-sm mb-2" style={{ color: 'var(--text)' }}>
+              Здесь собраны полезные ссылки и материалы по клиническим исследованиям и процессу проверки.
             </p>
             <a
               href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
@@ -207,9 +277,145 @@ export default function UploadPage() {
               rel="noopener noreferrer"
               className="text-sci-blue underline"
             >
+              Подробнее о клинических исследованиях
             </a>
             <div className="mt-4 text-sm text-muted">
+              <p>Плейсхолдер для будущих материалов: инструкции, ссылки на документацию и пр.</p>
             </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Clinical Trials Management */}
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
+                Add Clinical Trial
+              </h2>
+              
+              <form onSubmit={handleAddTrial} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                    Trial Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={trialForm.title}
+                    onChange={(e) => setTrialForm({...trialForm, title: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="Enter clinical trial title"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                    Description *
+                  </label>
+                  <textarea
+                    value={trialForm.description}
+                    onChange={(e) => setTrialForm({...trialForm, description: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md h-24 resize-vertical"
+                    placeholder="Brief description of the clinical trial"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                      Status
+                    </label>
+                    <select
+                      value={trialForm.status}
+                      onChange={(e) => setTrialForm({...trialForm, status: e.target.value as any})}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="recruiting">Recruiting</option>
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={trialForm.startDate}
+                      onChange={(e) => setTrialForm({...trialForm, startDate: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                      Phase
+                    </label>
+                    <input
+                      type="text"
+                      value={trialForm.phase}
+                      onChange={(e) => setTrialForm({...trialForm, phase: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md"
+                      placeholder="e.g., Phase I, II, III"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                      Sponsor
+                    </label>
+                    <input
+                      type="text"
+                      value={trialForm.sponsor}
+                      onChange={(e) => setTrialForm({...trialForm, sponsor: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md"
+                      placeholder="Organization or company name"
+                    />
+                  </div>
+                </div>
+                
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-sci-blue text-white rounded-md font-medium hover:opacity-90"
+                >
+                  Add Clinical Trial
+                </button>
+              </form>
+            </div>
+            
+            {/* Clinical Trials List */}
+            {clinicalTrials.length > 0 && (
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
+                  Added Clinical Trials ({clinicalTrials.length})
+                </h3>
+                
+                <div className="space-y-3">
+                  {clinicalTrials.map((trial) => (
+                    <div key={trial.id} className="p-4 border rounded-lg bg-gray-50">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium" style={{ color: 'var(--text)' }}>{trial.title}</h4>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          trial.status === 'recruiting' ? 'bg-green-100 text-green-800' :
+                          trial.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {trial.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted mb-2">{trial.description}</p>
+                      <div className="flex flex-wrap gap-4 text-xs text-muted">
+                        {trial.startDate && <span>Start: {trial.startDate}</span>}
+                        {trial.phase && <span>Phase: {trial.phase}</span>}
+                        {trial.sponsor && <span>Sponsor: {trial.sponsor}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
