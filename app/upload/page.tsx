@@ -32,33 +32,9 @@ export default function UploadPage() {
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Tabs */}
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={`px-3 py-1 rounded-md ${activeTab === 'upload' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
-          >
-            Upload
-          </button>
-          <a
-            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-sci-blue hover:text-white`}
-          >
-            Resources
-          </a>
         </div>
 
-        {/* Prominent link button (always visible) */}
-        <div className="mt-3">
-          <a
-            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-4 py-2 rounded-md bg-sci-blue text-white font-medium hover:opacity-90"
-          >
-            Go to Clinical Trials
-          </a>
-        </div>
+        
 
         {activeTab === 'upload' ? (
           <>
@@ -70,17 +46,6 @@ export default function UploadPage() {
           <p className="text-muted mt-2">
             Upload a medical image for AI-powered analysis and diagnosis
           </p>
-          {/* Visible link/button under header to ensure users can navigate */}
-          <div className="mt-4">
-            <a
-              href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-sci-blue text-white rounded-md font-medium hover:opacity-95"
-            >
-              Подробнее о клинических исследованиях
-            </a>
-          </div>
         </div>
 
          {/* Detection Type Selection */}
@@ -159,9 +124,6 @@ export default function UploadPage() {
             </div>
           </div>
         )}
-
-
-
         {/* Guidelines */}
         <div className="card">
           <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--text)' }}>
@@ -202,6 +164,17 @@ export default function UploadPage() {
                 All uploaded images undergo automatic anonymization and require clinical review before AI analysis. 
                 This ensures patient privacy and clinical oversight of the diagnostic process.
               </p>
+              {/* Prominent link button (always visible) */}
+        <div className="mt-3">
+          <a
+            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-4 py-2 rounded-md bg-sci-blue text-white font-medium hover:opacity-90"
+          >
+            Go to Clinical Trials
+          </a>
+        </div>
               <p className="text-sm mt-2">
                 <a
                   href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
@@ -209,7 +182,6 @@ export default function UploadPage() {
                   rel="noopener noreferrer"
                   className="text-sci-blue underline"
                 >
-                  Подробнее о клинических исследованиях
                 </a>
               </p>
             </div>
@@ -228,7 +200,6 @@ export default function UploadPage() {
           <div className="card">
             <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Resources</h2>
             <p className="text-sm mb-2" style={{ color: 'var(--text)' }}>
-              Здесь собраны полезные ссылки и материалы по клиническим исследованиям и процессу проверки.
             </p>
             <a
               href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
@@ -236,10 +207,8 @@ export default function UploadPage() {
               rel="noopener noreferrer"
               className="text-sci-blue underline"
             >
-              Подробнее о клинических исследованиях
             </a>
             <div className="mt-4 text-sm text-muted">
-              <p>Плейсхолдер для будущих материалов: инструкции, ссылки на документацию и пр.</p>
             </div>
           </div>
         )}
