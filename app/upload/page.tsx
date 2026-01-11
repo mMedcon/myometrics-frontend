@@ -158,6 +158,16 @@ export default function UploadPage() {
                 All uploaded images undergo automatic anonymization and require clinical review before AI analysis. 
                 This ensures patient privacy and clinical oversight of the diagnostic process.
               </p>
+              <p className="text-sm mt-2">
+                <a
+                  href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sci-blue underline"
+                >
+                  Подробнее о клинических исследованиях
+                </a>
+              </p>
             </div>
           </div>
         </div>
