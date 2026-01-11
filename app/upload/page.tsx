@@ -38,12 +38,26 @@ export default function UploadPage() {
           >
             Upload
           </button>
-          <button
-            onClick={() => setActiveTab('resources')}
-            className={`px-3 py-1 rounded-md ${activeTab === 'resources' ? 'bg-sci-blue text-white' : 'bg-gray-100 text-gray-700'}`}
+          <a
+            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-sci-blue hover:text-white`}
           >
             Resources
-          </button>
+          </a>
+        </div>
+
+        {/* Prominent link button (always visible) */}
+        <div className="mt-3">
+          <a
+            href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-4 py-2 rounded-md bg-sci-blue text-white font-medium hover:opacity-90"
+          >
+            Go to Clinical Trials
+          </a>
         </div>
 
         {activeTab === 'upload' ? (
@@ -56,6 +70,17 @@ export default function UploadPage() {
           <p className="text-muted mt-2">
             Upload a medical image for AI-powered analysis and diagnosis
           </p>
+          {/* Visible link/button under header to ensure users can navigate */}
+          <div className="mt-4">
+            <a
+              href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 bg-sci-blue text-white rounded-md font-medium hover:opacity-95"
+            >
+              Подробнее о клинических исследованиях
+            </a>
+          </div>
         </div>
 
          {/* Detection Type Selection */}
