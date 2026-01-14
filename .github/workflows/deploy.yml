@@ -46,9 +46,6 @@ jobs:
           NEXT_PUBLIC_DEV_MODE: ${{ secrets.NEXT_PUBLIC_DEV_MODE || true }}
           AI_API_KEY: ${{ secrets.AI_API_KEY || 'example' }}
 
-      - name: Export static site
-        run: npm run export
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
