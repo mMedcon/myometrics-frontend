@@ -46,6 +46,15 @@ jobs:
           NEXT_PUBLIC_DEV_MODE: ${{ secrets.NEXT_PUBLIC_DEV_MODE || true }}
           AI_API_KEY: ${{ secrets.AI_API_KEY || 'example' }}
 
+      - name: List output directory (debug)
+        run: |
+          echo "Contents of out directory:"
+          ls -la out/ || echo "out directory not found"
+          echo "Contents of .next directory:" 
+          ls -la .next/ || echo ".next directory not found"
+          echo "Current directory contents:"
+          ls -la
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
