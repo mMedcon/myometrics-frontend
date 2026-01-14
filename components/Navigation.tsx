@@ -30,6 +30,7 @@ export default function Navigation({ children }: NavigationProps) {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/upload', label: 'Upload Image' },
     { href: '/history', label: 'Upload History' },
+    { href: '/trials', label: 'Clinical Trials' },
     ...(user?.role === 'admin' ? [{ href: '/analytics', label: 'Analytics' }] : []),
   ];
 

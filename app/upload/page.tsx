@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import UploadWorkflow from '@/components/UploadWorkflow';
 
@@ -60,7 +60,12 @@ export default function UploadPage() {
       startDate: trialForm.startDate || new Date().toISOString().split('T')[0]
     };
     
-    setClinicalTrials(prev => [...prev, newTrial]);
+    setClinicalTrials(prev => {
+      const updated = [...prev, newTrial];
+      // persist to localStorage
+      try { localStorage.setItem('clinicalTrials', JSON.stringify(updated)); } catch (err) { console.warn(err); }
+      return updated;
+    });
     
     // Reset form
     setTrialForm({
@@ -72,6 +77,17 @@ export default function UploadPage() {
       sponsor: ''
     });
     
+  // Load clinical trials from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('clinicalTrials');
+      if (raw) {
+        setClinicalTrials(JSON.parse(raw));
+      }
+    } catch (err) {
+      console.warn('Failed to load clinical trials from localStorage', err);
+    }
+  }, []);
     // TODO: Send to API/database
     console.log('New clinical trial added:', newTrial);
   };
@@ -269,7 +285,7 @@ export default function UploadPage() {
           <div className="card">
             <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Resources</h2>
             <p className="text-sm mb-2" style={{ color: 'var(--text)' }}>
-              Здесь собраны полезные ссылки и материалы по клиническим исследованиям и процессу проверки.
+              Useful links and materials about clinical research and the review process are collected here.
             </p>
             <a
               href="https://mmedcon-finance-fveerhawl-mmedcon-techs-projects.vercel.app/clinical-trials"
@@ -280,7 +296,7 @@ export default function UploadPage() {
               Подробнее о клинических исследованиях
             </a>
             <div className="mt-4 text-sm text-muted">
-              <p>Плейсхолдер для будущих материалов: инструкции, ссылки на документацию и пр.</p>
+              <p>Placeholder for future resources: guides, documentation links, and more.</p>
             </div>
           </div>
         ) : (
