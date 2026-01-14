@@ -186,7 +186,7 @@ export default function UploadDetailsPage() {
     };
   }, []);
 
-  // Сections styles
+  // Sections styles
   const sectionCardStyle = {
     background: "#1a1d29",
     border: "1px solid #3a3f52",
@@ -411,7 +411,7 @@ export default function UploadDetailsPage() {
                             {isMuscleAbbrVisible && (
                               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                 {diagnosisType === "DMD" ? (
-                                  // Muscle Analysis для DMD
+                                  // Muscle Analysis for DMD
                                   <>
                                     {/* VL - Vastus Lateralis */}
                                     <div style={lesionItemStyle}>
@@ -558,7 +558,7 @@ export default function UploadDetailsPage() {
                                     </div>
                                   </>
                                 ) : (
-                                  // Brain Lesions для MS
+                                  // Brain Lesions for MS
                                   <>
                                     {/* FL - Frontal Lobe */}
                                     <div style={lesionItemStyle}>
@@ -945,7 +945,7 @@ export default function UploadDetailsPage() {
                             </div>
                             {isAgeProgressionVisible && (
                               <div style={{ color: "#9aa0a6", fontSize: 13, padding: "10px 0" }}>
-                                {/* Пустое поле или placeholder */}
+                                {/* Empty field or placeholder */}
                                 No data available yet.
                               </div>
                             )}

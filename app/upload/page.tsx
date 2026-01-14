@@ -293,7 +293,7 @@ export default function UploadPage() {
               rel="noopener noreferrer"
               className="text-sci-blue underline"
             >
-              Подробнее о клинических исследованиях
+              Learn more about clinical research
             </a>
             <div className="mt-4 text-sm text-muted">
               <p>Placeholder for future resources: guides, documentation links, and more.</p>

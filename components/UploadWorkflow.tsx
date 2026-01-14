@@ -381,7 +381,7 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
         const result = await microserviceAPI.uploadFile(
           selectedFiles[0],
           (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
-          imageType // <-- теперь это из пропсов
+          imageType // <-- now this is from props
         );
 
         setUploadResult(result);
