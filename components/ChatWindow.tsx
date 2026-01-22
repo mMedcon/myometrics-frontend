@@ -1,4 +1,4 @@
-import {BotMessageSquare, Minus, SendHorizontal, Square} from "lucide-react";
+import {BotMessageSquare, Minus, SendHorizontal, Square, ExternalLink} from "lucide-react";
 import {useEffect, useRef, useState} from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -90,8 +90,10 @@ const ChatWindow = () => {
     }
     
     function handleClinicalTrialsClick() {
-        // TODO: should be redirected to view the actual data
-        SendMessage("I want to learn about clinical trials");
+        // Redirect to clinical trials external URL
+        window.open('https://mmedcon-finance.vercel.app/', '_blank');
+        setShowClinicalButtons(false);
+        setInput("");
     }
     
     function handleRadialClick() {
@@ -175,11 +177,12 @@ const ChatWindow = () => {
                     {showClinicalButtons && (
                         <div className="absolute top-[-60px] left-0 right-0 flex justify-center gap-4 p-2 bg-opacity-90" style={{ backgroundColor: 'var(--card-background)' }}>
                             <button 
-                                className="px-3 py-1 rounded-md text-sm font-medium" 
+                                className="px-3 py-1 rounded-md text-sm font-medium flex items-center gap-1" 
                                 style={{ backgroundColor: 'var(--primary)', borderColor: 'var(--border)', border: '1px solid' }}
                                 onClick={handleClinicalTrialsClick}
+                                title="Open Clinical Trials in new tab"
                             >
-                                Clinical Trials
+                                Clinical Trials <ExternalLink size={14} />
                             </button>
                             <button 
                                 className="px-3 py-1 rounded-md text-sm font-medium" 

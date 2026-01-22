@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from "react-sketch-canvas";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
+import { imageCache } from "@/lib/cache/imageCache";
 
 export default function UploadDetailsPage() {
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
@@ -31,18 +32,34 @@ export default function UploadDetailsPage() {
 
   useEffect(() => {
   if (uploadId) {
-    const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
-    setMriImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
-    setDixonImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
+    // First try to get cached image
+    const cachedImageUrl = imageCache.getCachedImage(uploadId);
+    
+    if (cachedImageUrl) {
+      // Use cached image
+      setMriImageUrl(cachedImageUrl);
+      setDixonImageUrl(cachedImageUrl);
+      console.log('Using cached image for upload:', uploadId);
+    } else {
+      // Fallback to server URL
+      const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
+      setMriImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
+      setDixonImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
+      console.log('Using server image for upload:', uploadId);
+    }
 
+    // Always fetch upload info from server
     (async () => {
       try {
+        const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
         const res = await fetch(`${baseUrl}/upload/${uploadId}/info`);
         if (res.ok) {
           const data = await res.json();
           setUploadInfo(data);
         }
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to fetch upload info:', error);
+      }
     })();
   }
 }, [uploadId]);
@@ -358,7 +375,7 @@ export default function UploadDetailsPage() {
                         <div className="mri-image-container">
                           {mriImageUrl ? (
                             <img
-                              src="/image.png"
+                              src={mriImageUrl}
                               alt="DICOM Scan"
                               style={{
                                 width: "100%",
@@ -371,13 +388,16 @@ export default function UploadDetailsPage() {
                                 const img = e.currentTarget;
                                 setImgDims({ width: img.naturalWidth, height: img.naturalHeight });
                               }}
+                              onError={(e) => {
+                                console.error('Failed to load image:', mriImageUrl);
+                                // Fallback to placeholder if image fails to load
+                                e.currentTarget.src = "/image.png";
+                              }}
                             />
                           ) : (
-                            <Image
+                            <img
                               src="/image.png"
-                              alt="MRI Scan"
-                              width={600}
-                              height={400}
+                              alt="MRI Scan Placeholder"
                               style={{
                                 width: "100%",
                                 height: "auto",
@@ -840,19 +860,36 @@ export default function UploadDetailsPage() {
                             <div className="figure-caption">Control (9y) vs DMD (10y) - Thigh Cross-Sectional Analysis</div>
                           </div>
                           <div className="figure-image-wrapper">
-                            <Image
-                              src="/image.png"
-                              alt="DICOM Scan"
-                              width={600}
-                              height={400}
-                              style={{
-                                width: "100%",
-                                height: "auto",
-                                borderRadius: "8px",
-                                border: "1px solid #3a3f52",
-                                display: showCanvas ? "none" : "block"
-                              }}
-                            />
+                            {dixonImageUrl ? (
+                              <img
+                                src={dixonImageUrl}
+                                alt="Dixon MRI Study"
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  borderRadius: "8px",
+                                  border: "1px solid #3a3f52",
+                                  display: showCanvas ? "none" : "block"
+                                }}
+                                onError={(e) => {
+                                  console.error('Failed to load Dixon image:', dixonImageUrl);
+                                  // Fallback to placeholder if image fails to load
+                                  e.currentTarget.src = "/image.png";
+                                }}
+                              />
+                            ) : (
+                              <img
+                                src="/image.png"
+                                alt="Dixon MRI Placeholder"
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  borderRadius: "8px",
+                                  border: "1px solid #3a3f52",
+                                  display: showCanvas ? "none" : "block"
+                                }}
+                              />
+                            )}
                           </div>
                         </div>
                         <div className="dixon-data-panel">

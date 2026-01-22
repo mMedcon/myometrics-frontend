@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api/microservice';
+import { imageCache } from '@/lib/cache/imageCache';
 
 interface UploadProgress {
   percentage: number;
@@ -383,6 +384,15 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
           (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
           imageType // <-- now this is from props
         );
+
+        // Cache the uploaded image for later use
+        try {
+          await imageCache.cacheImage(result.upload_id, selectedFiles[0]);
+          console.log('Image cached successfully for upload:', result.upload_id);
+        } catch (cacheError) {
+          console.warn('Failed to cache image:', cacheError);
+          // Don't fail the upload if caching fails
+        }
 
         setUploadResult(result);
         setUploadProgress({ percentage: 100, stage: 'analyzing' });

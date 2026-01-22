@@ -3,6 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import UploadWorkflow from '@/components/UploadWorkflow';
+import { 
+  clinicalTrialsAPI, 
+  ClinicalTrial, 
+  Company, 
+  RecruitmentStatus, 
+  TrialPhase 
+} from '@/lib/api/clinicalTrials';
 
 export default function UploadPage() {
   const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
@@ -11,23 +18,20 @@ export default function UploadPage() {
   const [activeTab, setActiveTab] = useState<'upload' | 'resources' | 'trials'>('upload');
   
   // Clinical trials state
-  const [clinicalTrials, setClinicalTrials] = useState<Array<{
-    id: string;
-    title: string;
-    description: string;
-    status: 'recruiting' | 'active' | 'completed';
-    startDate: string;
-    phase: string;
-    sponsor: string;
-  }>>([]);
+  const [clinicalTrials, setClinicalTrials] = useState<ClinicalTrial[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [recruitmentStatuses, setRecruitmentStatuses] = useState<RecruitmentStatus[]>([]);
+  const [trialPhases, setTrialPhases] = useState<TrialPhase[]>([]);
+  const [loading, setLoading] = useState(false);
   
   const [trialForm, setTrialForm] = useState({
-    title: '',
-    description: '',
-    status: 'recruiting' as const,
-    startDate: '',
-    phase: '',
-    sponsor: ''
+    trial_id_source: '',
+    public_title: '',
+    scientific_title: '',
+    primary_sponsor_id: 0,
+    recruitment_status_id: 1,
+    registration_date: new Date().toISOString().split('T')[0],
+    target_size: 0,
   });
 
     // Function to validate detection type selection
@@ -48,49 +52,80 @@ export default function UploadPage() {
   };
 
   // Handle clinical trial form submission
-  const handleAddTrial = (e: React.FormEvent) => {
+  const handleAddTrial = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trialForm.title.trim() || !trialForm.description.trim()) {
+    if (!trialForm.public_title.trim() || !trialForm.scientific_title.trim()) {
       return;
     }
     
-    const newTrial = {
-      id: Date.now().toString(),
-      ...trialForm,
-      startDate: trialForm.startDate || new Date().toISOString().split('T')[0]
-    };
-    
-    setClinicalTrials(prev => {
-      const updated = [...prev, newTrial];
-      // persist to localStorage
-      try { localStorage.setItem('clinicalTrials', JSON.stringify(updated)); } catch (err) { console.warn(err); }
-      return updated;
-    });
-    
-    // Reset form
-    setTrialForm({
-      title: '',
-      description: '',
-      status: 'recruiting',
-      startDate: '',
-      phase: '',
-      sponsor: ''
-    });
-    
-  // Load clinical trials from localStorage on mount
-  useEffect(() => {
+    setLoading(true);
     try {
-      const raw = localStorage.getItem('clinicalTrials');
-      if (raw) {
-        setClinicalTrials(JSON.parse(raw));
+      // Generate trial ID if not provided
+      if (!trialForm.trial_id_source.trim()) {
+        trialForm.trial_id_source = clinicalTrialsAPI.generateTrialIdSource();
       }
-    } catch (err) {
-      console.warn('Failed to load clinical trials from localStorage', err);
+
+      // Create trial in database
+      const newTrial = await clinicalTrialsAPI.createTrial(trialForm);
+      
+      // Update local state
+      setClinicalTrials(prev => [newTrial, ...prev]);
+      
+      // Reset form
+      setTrialForm({
+        trial_id_source: '',
+        public_title: '',
+        scientific_title: '',
+        primary_sponsor_id: companies[0]?.id || 1,
+        recruitment_status_id: 1,
+        registration_date: new Date().toISOString().split('T')[0],
+        target_size: 0,
+      });
+      
+      console.log('Clinical trial added successfully:', newTrial);
+    } catch (error) {
+      console.error('Failed to add clinical trial:', error);
+      // TODO: Show user-friendly error message
+    } finally {
+      setLoading(false);
     }
-  }, []);
-    // TODO: Send to API/database
-    console.log('New clinical trial added:', newTrial);
   };
+
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load all reference data in parallel
+        const [trialsData, companiesData, statusesData, phasesData] = await Promise.all([
+          clinicalTrialsAPI.getTrials(1, 50),
+          clinicalTrialsAPI.getCompanies(),
+          clinicalTrialsAPI.getRecruitmentStatuses(),
+          clinicalTrialsAPI.getTrialPhases(),
+        ]);
+        
+        setClinicalTrials(trialsData.trials);
+        setCompanies(companiesData);
+        setRecruitmentStatuses(statusesData);
+        setTrialPhases(phasesData);
+        
+        // Set default values for form
+        if (companiesData.length > 0) {
+          setTrialForm(prev => ({ ...prev, primary_sponsor_id: companiesData[0].id }));
+        }
+        
+      } catch (error) {
+        console.error('Failed to load clinical trials data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (activeTab === 'trials') {
+      loadInitialData();
+    }
+  }, [activeTab]);
 
   return (
     <Navigation>
@@ -310,27 +345,41 @@ export default function UploadPage() {
               <form onSubmit={handleAddTrial} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                    Trial Title *
+                    Trial ID (Optional)
                   </label>
                   <input
                     type="text"
-                    value={trialForm.title}
-                    onChange={(e) => setTrialForm({...trialForm, title: e.target.value})}
+                    value={trialForm.trial_id_source}
+                    onChange={(e) => setTrialForm({...trialForm, trial_id_source: e.target.value})}
                     className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Enter clinical trial title"
+                    placeholder="Auto-generated if left empty"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave empty for auto-generation</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                    Public Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={trialForm.public_title}
+                    onChange={(e) => setTrialForm({...trialForm, public_title: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="Enter public trial title"
                     required
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                    Description *
+                    Scientific Title *
                   </label>
                   <textarea
-                    value={trialForm.description}
-                    onChange={(e) => setTrialForm({...trialForm, description: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-md h-24 resize-vertical"
-                    placeholder="Brief description of the clinical trial"
+                    value={trialForm.scientific_title}
+                    onChange={(e) => setTrialForm({...trialForm, scientific_title: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md h-20 resize-vertical"
+                    placeholder="Detailed scientific title of the trial"
                     required
                   />
                 </div>
@@ -338,65 +387,76 @@ export default function UploadPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                      Status
+                      Primary Sponsor
                     </label>
                     <select
-                      value={trialForm.status}
-                      onChange={(e) => setTrialForm({...trialForm, status: e.target.value as any})}
+                      value={trialForm.primary_sponsor_id}
+                      onChange={(e) => setTrialForm({...trialForm, primary_sponsor_id: parseInt(e.target.value)})}
                       className="w-full px-3 py-2 border rounded-md"
+                      required
                     >
-                      <option value="recruiting">Recruiting</option>
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
+                      {companies.map(company => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                      Start Date
+                      Recruitment Status
                     </label>
-                    <input
-                      type="date"
-                      value={trialForm.startDate}
-                      onChange={(e) => setTrialForm({...trialForm, startDate: e.target.value})}
+                    <select
+                      value={trialForm.recruitment_status_id}
+                      onChange={(e) => setTrialForm({...trialForm, recruitment_status_id: parseInt(e.target.value)})}
                       className="w-full px-3 py-2 border rounded-md"
-                    />
+                      required
+                    >
+                      {recruitmentStatuses.map(status => (
+                        <option key={status.id} value={status.id}>
+                          {status.status}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                      Phase
+                      Registration Date
                     </label>
                     <input
-                      type="text"
-                      value={trialForm.phase}
-                      onChange={(e) => setTrialForm({...trialForm, phase: e.target.value})}
+                      type="date"
+                      value={trialForm.registration_date}
+                      onChange={(e) => setTrialForm({...trialForm, registration_date: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
-                      placeholder="e.g., Phase I, II, III"
+                      required
                     />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                      Sponsor
+                      Target Size (Participants)
                     </label>
                     <input
-                      type="text"
-                      value={trialForm.sponsor}
-                      onChange={(e) => setTrialForm({...trialForm, sponsor: e.target.value})}
+                      type="number"
+                      min="0"
+                      value={trialForm.target_size}
+                      onChange={(e) => setTrialForm({...trialForm, target_size: parseInt(e.target.value) || 0})}
                       className="w-full px-3 py-2 border rounded-md"
-                      placeholder="Organization or company name"
+                      placeholder="Expected number of participants"
                     />
                   </div>
                 </div>
                 
                 <button
                   type="submit"
-                  className="w-full px-4 py-2 bg-sci-blue text-white rounded-md font-medium hover:opacity-90"
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-sci-blue text-white rounded-md font-medium hover:opacity-90 disabled:opacity-50"
                 >
-                  Add Clinical Trial
+                  {loading ? 'Adding...' : 'Add Clinical Trial'}
                 </button>
               </form>
             </div>
@@ -405,30 +465,38 @@ export default function UploadPage() {
             {clinicalTrials.length > 0 && (
               <div className="card">
                 <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
-                  Added Clinical Trials ({clinicalTrials.length})
+                  Clinical Trials ({clinicalTrials.length})
                 </h3>
                 
                 <div className="space-y-3">
-                  {clinicalTrials.map((trial) => (
-                    <div key={trial.id} className="p-4 border rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium" style={{ color: 'var(--text)' }}>{trial.title}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          trial.status === 'recruiting' ? 'bg-green-100 text-green-800' :
-                          trial.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {trial.status}
-                        </span>
+                  {clinicalTrials.map((trial) => {
+                    const status = recruitmentStatuses.find(s => s.id === trial.recruitment_status_id);
+                    const sponsor = companies.find(c => c.id === trial.primary_sponsor_id);
+                    
+                    return (
+                      <div key={trial.id} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium" style={{ color: 'var(--text)' }}>{trial.public_title}</h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            status?.status === 'Recruiting' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                            status?.status === 'Active' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            {status?.status || 'Unknown'}
+                          </span>
+                        </div>
+                        
+                        <p className="text-sm text-muted mb-2">{trial.scientific_title}</p>
+                        
+                        <div className="flex flex-wrap gap-4 text-xs text-gray-600 dark:text-gray-400">
+                          <span>ID: {trial.trial_id_source}</span>
+                          {trial.registration_date && <span>Registered: {new Date(trial.registration_date).toLocaleDateString()}</span>}
+                          {trial.target_size && trial.target_size > 0 && <span>Target Size: {trial.target_size}</span>}
+                          {sponsor && <span>Sponsor: {sponsor.name}</span>}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted mb-2">{trial.description}</p>
-                      <div className="flex flex-wrap gap-4 text-xs text-muted">
-                        {trial.startDate && <span>Start: {trial.startDate}</span>}
-                        {trial.phase && <span>Phase: {trial.phase}</span>}
-                        {trial.sponsor && <span>Sponsor: {trial.sponsor}</span>}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
