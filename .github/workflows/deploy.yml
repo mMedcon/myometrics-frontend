@@ -37,8 +37,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Make build script executable
+        run: chmod +x scripts/build-for-pages.sh
+
       - name: Build project
-        run: npm run build
+        run: ./scripts/build-for-pages.sh
         env:
           # Add any environment variables needed for the build
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://api.example.com' }}
