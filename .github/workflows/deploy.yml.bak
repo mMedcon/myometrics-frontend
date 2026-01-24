@@ -1,9 +1,11 @@
 name: Deploy to Vercel
 
 on:
+  # Trigger the workflow on push to main branch
   push:
     branches:
       - main
+  # Allow manual triggering
   workflow_dispatch:
 
 jobs:
@@ -37,3 +39,31 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
+
+      - name: List output directory (debug)
+        run: |
+          echo "Contents of out directory:"
+          ls -la out/ || echo "out directory not found"
+          echo "Contents of .next directory:" 
+          ls -la .next/ || echo ".next directory not found"
+          echo "Current directory contents:"
+          ls -la
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

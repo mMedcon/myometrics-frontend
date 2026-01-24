@@ -1,8 +1,5 @@
-// Server Component wrapper
-import BatchResultsClient from './BatchResultsClient';
-
+// Simple server component for testing
 export async function generateStaticParams() {
-  // Return empty array - dynamic routes will be handled at runtime
   return [];
 }
 
@@ -12,5 +9,11 @@ interface PageProps {
 
 export default async function BatchResultsPage({ params }: PageProps) {
   const { id } = await params;
-  return <BatchResultsClient batchId={id} />;
+  
+  return (
+    <div>
+      <h1>Batch Results: {id}</h1>
+      <p>This is a test page for static export.</p>
+    </div>
+  );
 }
