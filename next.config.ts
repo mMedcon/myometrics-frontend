@@ -1,10 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Disable static export for now - dynamic routes are problematic
-  // basePath: '/myometrics-frontend',
-  // output: 'export',
-  // outputFileTracingRoot: __dirname,
+  // Enable GitHub Pages deployment
+  basePath: '/myometrics-frontend',
+  assetPrefix: '/myometrics-frontend/',
   trailingSlash: true,
   
   images: {
