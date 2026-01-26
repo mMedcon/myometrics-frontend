@@ -34,37 +34,12 @@ jobs:
       - name: Build project
         run: npm run build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://api.example.com' }}
-          NEXT_PUBLIC_MICROSERVICE_URL: ${{ secrets.NEXT_PUBLIC_MICROSERVICE_URL || 'https://microservice.example.com' }}
-          NEXT_PUBLIC_DEV_MODE: ${{ secrets.NEXT_PUBLIC_DEV_MODE || true }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY || 'example' }}
-
-      - name: Create static export manually
-        run: |
-          mkdir -p out
-          cp -r .next/static out/_next/static || echo "No static directory"
-          
-          # Copy static pages
-          find .next/server/app -name "*.html" -exec cp {} out/ \; 2>/dev/null || echo "No HTML files found"
-          
-          # Create index.html
-          echo '<!DOCTYPE html>
-          <html>
-          <head>
-              <meta charset="utf-8">
-              <title>MyoMetrics</title>
-              <meta http-equiv="refresh" content="0;url=/myometrics-frontend/upload">
-          </head>
-          <body>
-              <p>Redirecting to MyoMetrics...</p>
-          </body>
-          </html>' > out/index.html
-          
-          # Create 404.html for GitHub Pages
-          cp out/index.html out/404.html
-          
-          echo "Contents of out directory:"
-          ls -la out/
+          NODE_ENV: production
+          NEXT_PUBLIC_API_URL: https://myometrics-backend.onrender.com
+          NEXT_PUBLIC_MICROSERVICE_URL: https://myometrics-backend.onrender.com
+          NEXT_PUBLIC_DICOM_SERVICE_URL: https://dicom-ar4z.onrender.com
+          NEXT_PUBLIC_DEV_MODE: false
+          AI_API_KEY: ${{ secrets.AI_API_KEY || 'demo-key' }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

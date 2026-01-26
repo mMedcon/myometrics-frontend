@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import UploadWorkflow from '@/components/UploadWorkflow';
+import ServiceStatusChecker from '@/components/ServiceStatusChecker';
 import { 
   clinicalTrialsAPI, 
   ClinicalTrial, 
@@ -130,6 +131,9 @@ export default function UploadPage() {
   return (
     <Navigation>
       <div className="max-w-2xl mx-auto space-y-8">
+        {/* Backend Services Status */}
+        <ServiceStatusChecker />
+        
         {/* Tabs */}
         <div className="flex items-center space-x-2">
           <button

@@ -1,6 +1,17 @@
 // Microservice API service for image uploads and analysis
 const MICROSERVICE_URL = process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://localhost:8000';
+const DICOM_SERVICE_URL = process.env.NEXT_PUBLIC_DICOM_SERVICE_URL || process.env.NEXT_PUBLIC_MICROSERVICE_URL || 'http://localhost:8000';
 const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
+// API Configuration for Render services
+const API_CONFIG = {
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  // Add timeout for production services
+  timeout: 30000,
+};
 
 // Mock data for development mode
 const mockStats: Stats = {
@@ -590,6 +601,124 @@ class MicroserviceAPI {
    */
   getUploadFileUrl(uploadId: string): string {
     return `${MICROSERVICE_URL}/upload/${uploadId}/file`;
+  }
+
+  // DICOM Service Integration
+  
+  /**
+   * Get DICOM viewer URL for a specific upload
+   */
+  getDicomViewerUrl(uploadId: string): string {
+    return `${DICOM_SERVICE_URL}/dicom/viewer/${uploadId}`;
+  }
+
+  /**
+   * Check if upload is a DICOM file
+   */
+  async isDicomFile(uploadId: string): Promise<boolean> {
+    if (isDevMode) {
+      return uploadId.includes('dicom') || uploadId.includes('dcm');
+    }
+
+    try {
+      const response = await fetch(`${DICOM_SERVICE_URL}/dicom/${uploadId}/info`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get DICOM metadata
+   */
+  async getDicomMetadata(uploadId: string): Promise<any> {
+    if (isDevMode) {
+      return {
+        patientName: 'DEMO^PATIENT',
+        studyDate: '20240101',
+        modality: 'CT',
+        studyDescription: 'Demo DICOM Study',
+        seriesDescription: 'Demo Series',
+        imageCount: 1,
+      };
+    }
+
+    const response = await fetch(`${DICOM_SERVICE_URL}/dicom/${uploadId}/metadata`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch DICOM metadata');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get DICOM image frames
+   */
+  async getDicomFrames(uploadId: string): Promise<string[]> {
+    if (isDevMode) {
+      return [`${MICROSERVICE_URL}/upload/${uploadId}/preview`];
+    }
+
+    const response = await fetch(`${DICOM_SERVICE_URL}/dicom/${uploadId}/frames`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch DICOM frames');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Health check for backend services
+   */
+  async healthCheck(): Promise<{ 
+    microservice: boolean; 
+    dicom: boolean; 
+    urls: { microservice: string; dicom: string } 
+  }> {
+    const result = {
+      microservice: false,
+      dicom: false,
+      urls: {
+        microservice: MICROSERVICE_URL,
+        dicom: DICOM_SERVICE_URL,
+      },
+    };
+
+    if (isDevMode) {
+      return { ...result, microservice: true, dicom: true };
+    }
+
+    // Check microservice
+    try {
+      const microResponse = await fetch(`${MICROSERVICE_URL}/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+      result.microservice = microResponse.ok;
+    } catch {
+      result.microservice = false;
+    }
+
+    // Check DICOM service
+    try {
+      const dicomResponse = await fetch(`${DICOM_SERVICE_URL}/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+      result.dicom = dicomResponse.ok;
+    } catch {
+      result.dicom = false;
+    }
+
+    return result;
   }
 }
 
