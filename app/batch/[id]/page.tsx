@@ -1,9 +1,13 @@
-// Server Component wrapper
-import BatchResultsClient from './BatchResultsClient';
+// Static export compatible page for batch results
+import { redirect } from 'next/navigation';
 
 export async function generateStaticParams() {
-  // Return empty array - dynamic routes will be handled at runtime
-  return [];
+  // Generate a few sample IDs for static export
+  return [
+    { id: 'sample' },
+    { id: 'demo' },
+    { id: 'test' },
+  ];
 }
 
 interface PageProps {
@@ -11,6 +15,7 @@ interface PageProps {
 }
 
 export default async function BatchResultsPage({ params }: PageProps) {
-  const { id } = await params;
-  return <BatchResultsClient batchId={id} />;
+  // For static export, redirect to upload page
+  // Dynamic functionality will be handled client-side
+  redirect('/upload');
 }

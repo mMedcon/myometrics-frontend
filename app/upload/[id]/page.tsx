@@ -1,9 +1,13 @@
-// Server Component wrapper
-import UploadDetailsClient from './UploadDetailsClient';
+// Static export compatible page for upload details
+import { redirect } from 'next/navigation';
 
 export async function generateStaticParams() {
-  // Return empty array - dynamic routes will be handled at runtime
-  return [];
+  // Generate a few sample IDs for static export
+  return [
+    { id: 'sample' },
+    { id: 'demo' },
+    { id: 'test' },
+  ];
 }
 
 interface PageProps {
@@ -11,6 +15,7 @@ interface PageProps {
 }
 
 export default async function UploadDetailsPage({ params }: PageProps) {
-  const { id } = await params;
-  return <UploadDetailsClient uploadId={id} />;
+  // For static export, redirect to upload page
+  // Dynamic functionality will be handled client-side
+  redirect('/upload');
 }

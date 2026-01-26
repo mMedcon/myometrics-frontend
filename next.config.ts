@@ -10,8 +10,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   
-  // Temporarily disable static export for testing
-  // output: 'export',
+  // Enable static export for production deployment
+  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
 };
 
 export default nextConfig;
