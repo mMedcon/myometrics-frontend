@@ -28,6 +28,7 @@ export default function Navigation({ children }: NavigationProps) {
   };
 
   const navigationItems = [
+    { href: '/dashboard', label: 'Dashboard' },
     { href: '/upload', label: 'Upload Image' },
     { href: '/history', label: 'Upload History' },
     ...(user?.role === 'admin' ? [{ href: '/analytics', label: 'Analytics' }] : []),
@@ -41,7 +42,7 @@ export default function Navigation({ children }: NavigationProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Link href="/upload" className="flex items-center space-x-2">
+              <Link href="/dashboard" className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
                   <span className="text-white font-bold text-lg">M</span>
                 </div>

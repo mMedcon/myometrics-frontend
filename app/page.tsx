@@ -11,7 +11,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.push('/upload');
+        router.push('/dashboard');
       } else {
         router.push('/auth');
       }
