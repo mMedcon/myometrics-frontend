@@ -1,17 +1,34 @@
 import type { NextConfig } from "next";
 
+const isVercel = process.env.VERCEL === '1';
+const isGitHubPages = process.env.GITHUB_PAGES === 'true';
+
 const nextConfig: NextConfig = {
-  // Enable GitHub Pages deployment
-  basePath: process.env.NODE_ENV === 'production' ? '/myometrics-frontend' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/myometrics-frontend/' : '',
-  trailingSlash: true,
+  // Configure based on deployment platform
+  ...(isGitHubPages && {
+    // GitHub Pages specific configuration
+    basePath: '/myometrics-frontend',
+    assetPrefix: '/myometrics-frontend/',
+    trailingSlash: true,
+    output: 'export',
+    images: {
+      unoptimized: true,
+    },
+  }),
   
-  images: {
-    unoptimized: true,
-  },
+  ...(isVercel && {
+    // Vercel specific configuration (supports dynamic routes)
+    images: {
+      domains: ['myometrics-backend.onrender.com', 'dicom-ar4z.onrender.com'],
+    },
+  }),
   
-  // Enable static export for production deployment
-  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  // Default configuration for local development
+  ...(!isVercel && !isGitHubPages && {
+    images: {
+      unoptimized: true,
+    },
+  }),
 };
 
 export default nextConfig;
