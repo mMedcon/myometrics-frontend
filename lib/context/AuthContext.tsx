@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, User } from '@/lib/api';
+import { useSession } from 'next-auth/react';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+  const { data: nextAuthSession, status: nextAuthStatus } = useSession();
+
+  // If NextAuth is enabled and user signs in via Auth0, sync session -> local user
+  useEffect(() => {
+    try {
+      if (nextAuthStatus === 'authenticated' && nextAuthSession) {
+        const sUser = (nextAuthSession as any).user || {};
+        const fullName = sUser.name || '';
+        const [firstName, ...rest] = fullName.split(' ');
+        const lastName = rest.join(' ') || '';
+
+        const mappedUser: User = {
+          id: -1,
+          email: sUser.email || '',
+          firstName: firstName || sUser.email || 'User',
+          lastName: lastName,
+          role: 'user',
+          clinicName: undefined,
+          dateJoined: new Date().toISOString(),
+        };
+
+        setUser(mappedUser);
+
+        // Store access token locally so existing api/authService can reuse it
+        if ((nextAuthSession as any).accessToken) {
+          localStorage.setItem('access_token', (nextAuthSession as any).accessToken);
+        }
+      }
+    } catch (e) {
+      // ignore mapping errors
+      console.error('NextAuth session mapping failed', e);
+    }
+    // we intentionally don't clear user on unauthenticated here to avoid
+    // interfering with existing authService flows unless explicit logout is called
+  }, [nextAuthSession, nextAuthStatus]);
 
   useEffect(() => {
     // Check if user is already authenticated on mount
