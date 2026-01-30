@@ -8,6 +8,7 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import {IconKeys} from "next/dist/lib/metadata/constants";
 import ChatWindow from "@/components/ChatWindow";
 import ImageCacheManager from "@/components/ImageCacheManager";
+import AuthButton from "@/components/AuthButton";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -80,9 +81,8 @@ export default function Navigation({ children }: NavigationProps) {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center space-x-2" style={{ color: 'var(--text)' }}>
-                <span className="text-sm">Welcome, {user?.firstName}</span>
-              </div>
+              {/* Auth0 Button */}
+              <AuthButton />
               
               {/* Cache Manager */}
               <div className="relative">
