@@ -81,8 +81,12 @@ export default function Navigation({ children }: NavigationProps) {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Auth0 Button */}
-              <AuthButton />
+              {/* Temporarily disable AuthButton for testing */}
+              {/* <AuthButton /> */}
+              
+              <div className="hidden md:flex items-center space-x-2" style={{ color: 'var(--text)' }}>
+                <span className="text-sm">Welcome, {user?.firstName}</span>
+              </div>
               
               {/* Cache Manager */}
               <div className="relative">

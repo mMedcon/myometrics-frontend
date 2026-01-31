@@ -184,7 +184,7 @@ export default function UploadPage() {
                   ? 'border-sci-blue bg-sci-blue bg-opacity-10' 
                   : 'border-gray-300 hover:border-sci-blue'
               }`}
-              onChange={e => setImageType((e.target as HTMLInputElement).value as "MS" | "DMD" | "")}
+              onClick={() => handleDetectionSelection('dmd')}
             >
               <div className="flex items-center space-x-3">
                 <input
