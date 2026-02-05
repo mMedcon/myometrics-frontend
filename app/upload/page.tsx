@@ -13,9 +13,9 @@ import {
 } from '@/lib/api/clinicalTrials';
 
 export default function UploadPage() {
-  const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | null>(null);
+  const [selectedDetection, setSelectedDetection] = useState<'dmd' | 'tumor' | 'filler' | null>(null);
   const [error, setError] = useState('');
-   const [imageType, setImageType] = useState<"MS" | "DMD" | "">("");
+   const [imageType, setImageType] = useState<"MS" | "DMD" | "FILLER" | "">("");
   const [activeTab, setActiveTab] = useState<'upload' | 'resources' | 'trials'>('upload');
   
   // Clinical trials state
@@ -46,9 +46,15 @@ export default function UploadPage() {
   };
 
   // Clear error when user makes a selection
-  const handleDetectionSelection = (type: 'dmd' | 'tumor') => {
+  const handleDetectionSelection = (type: 'dmd' | 'tumor' | 'filler') => {
     setSelectedDetection(type);
-    setImageType(type === 'dmd' ? 'DMD' : 'MS');
+    if (type === 'dmd') {
+      setImageType('DMD');
+    } else if (type === 'tumor') {
+      setImageType('MS');
+    } else if (type === 'filler') {
+      setImageType('FILLER');
+    }
     setError('');
   };
 
@@ -177,7 +183,7 @@ export default function UploadPage() {
           <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text)' }}>
             Select Detection Type
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div 
               className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                 selectedDetection === 'dmd' 
@@ -225,6 +231,32 @@ export default function UploadPage() {
                   <h3 className="font-medium" style={{ color: 'var(--text)' }}>MS</h3>
                   <p className="text-sm text-muted">
                     Brain tumor identification and classification
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                selectedDetection === 'filler' 
+                  ? 'border-sci-blue bg-sci-blue bg-opacity-10' 
+                  : 'border-gray-300 hover:border-sci-blue'
+              }`}
+              onClick={() => handleDetectionSelection('filler')}
+            >
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  name="detection"
+                  value="filler"
+                  checked={selectedDetection === 'filler'}
+                  onChange={() => handleDetectionSelection('filler')}
+                  className="text-sci-blue"
+                />
+                <div>
+                  <h3 className="font-medium" style={{ color: 'var(--text)' }}>Filler Localisation</h3>
+                  <p className="text-sm text-muted">
+                    Dermal filler detection and localization analysis
                   </p>
                 </div>
               </div>

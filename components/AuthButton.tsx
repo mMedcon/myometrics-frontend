@@ -9,19 +9,17 @@ export default function AuthButton() {
   if (status === 'loading') return <p>Загрузка...</p>;
 
   if (session) {
-    return (
-      <div className="flex items-center space-x-3">
-        <span className="text-sm">{session.user?.name || session.user?.email}</span>
-        <button className="btn btn-outline" onClick={() => signOut()}>
-          Выйти
-        </button>
-      </div>
-    );
+    // User is logged in but we don't show anything here
+    // Logout functionality is handled in Navigation dropdown
+    return null;
   }
 
   return (
-    <button className="btn btn-primary" onClick={() => signIn('auth0')}>
-      Войти через Auth0
+    <button
+      className="btn btn-primary"
+      onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+    >
+      Войти
     </button>
   );
 }

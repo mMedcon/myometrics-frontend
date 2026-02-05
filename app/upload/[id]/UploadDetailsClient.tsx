@@ -29,9 +29,13 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
   const [mriImageUrl, setMriImageUrl] = useState<string | null>(null);
   const [uploadInfo, setUploadInfo] = useState<{ image_type?: string } | null>(null);
   const [expandedLesion, setExpandedLesion] = useState<string | null>(null);
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
   if (uploadId) {
+    console.log('🔍 Loading upload details for:', uploadId);
+    
     // First try to get cached image
     const cachedImageUrl = imageCache.getCachedImage(uploadId);
     
@@ -39,32 +43,85 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
       // Use cached image
       setMriImageUrl(cachedImageUrl);
       setDixonImageUrl(cachedImageUrl);
-      console.log('Using cached image for upload:', uploadId);
+      console.log('📄 Using cached image for upload:', uploadId);
     } else {
       // Fallback to server URL
       const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
       setMriImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
       setDixonImageUrl(`${baseUrl}/upload/${uploadId}/preview`);
-      console.log('Using server image for upload:', uploadId);
+      console.log('🌐 Using server image for upload:', uploadId);
     }
 
-    // Always fetch upload info from server
+    // Always fetch upload info from server (metadata stored in DB)
     (async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_MICROSERVICE_URL;
-        const res = await fetch(`${baseUrl}/upload/${uploadId}/info`);
+        const infoUrl = `${baseUrl}/upload/${uploadId}/info`;
+        console.log('📊 Fetching upload info from:', infoUrl);
+        
+        const res = await fetch(infoUrl);
+        console.log('📊 Upload info response status:', res.status);
+        
         if (res.ok) {
           const data = await res.json();
+          console.log('📊 Upload info data received:', JSON.stringify(data, null, 2));
+          console.log('🏷️  Image type from server:', data.image_type);
           setUploadInfo(data);
+        } else {
+          console.error('❌ Failed to fetch upload info from server, trying localStorage...');
+          
+          // Fallback to localStorage for development/testing
+          const localData = localStorage.getItem(`upload_${uploadId}`);
+          if (localData) {
+            const parsedData = JSON.parse(localData);
+            console.log('💾 Using localStorage data:', parsedData);
+            setUploadInfo(parsedData);
+          } else {
+            console.error('❌ No data found in localStorage either');
+            
+            // Check if this is a known mock upload and set appropriate image_type
+            let mockImageType = 'MS'; // default
+            if (uploadId === 'upload_001' || uploadId === 'upload_004') {
+              mockImageType = 'MS'; // Brain scans
+            } else if (uploadId === 'upload_002' || uploadId === 'upload_006') {
+              mockImageType = 'DMD'; // Muscle scans
+            } else if (uploadId === 'upload_003' || uploadId === 'upload_005') {
+              mockImageType = 'FILLER'; // Filler scans
+            }
+            
+            console.log('🎭 Using mock image type for', uploadId, ':', mockImageType);
+            setUploadInfo({ image_type: mockImageType });
+          }
         }
       } catch (error) {
-        console.warn('Failed to fetch upload info:', error);
+        console.error('❌ Network error fetching upload info, trying localStorage...', error);
+        
+        // Fallback to localStorage for development/testing
+        const localData = localStorage.getItem(`upload_${uploadId}`);
+        if (localData) {
+          const parsedData = JSON.parse(localData);
+          console.log('💾 Using localStorage data after network error:', parsedData);
+          setUploadInfo(parsedData);
+        } else {
+          console.error('❌ No fallback data available');
+          
+          // Check if this is a known mock upload and set appropriate image_type  
+          let mockImageType = 'MS'; // default
+          if (uploadId === 'upload_001' || uploadId === 'upload_004') {
+            mockImageType = 'MS'; // Brain scans
+          } else if (uploadId === 'upload_002' || uploadId === 'upload_006') {
+            mockImageType = 'DMD'; // Muscle scans
+          } else if (uploadId === 'upload_003' || uploadId === 'upload_005') {
+            mockImageType = 'FILLER'; // Filler scans
+          }
+          
+          console.log('🎭 Using mock image type for', uploadId, ':', mockImageType);
+          setUploadInfo({ image_type: mockImageType });
+        }
       }
     })();
   }
 }, [uploadId]);
-
-  const [dixonImageUrl, setDixonImageUrl] = useState<string | null>(null);
 
   // useEffect for interactive features
   useEffect(() => {
@@ -110,45 +167,6 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
       });
     });
 
-    // === Hover biomarkers ===
-    document.querySelectorAll<HTMLElement>(".biomarker-card").forEach(card => {
-      card.addEventListener("mouseenter", function () {
-        const label = this.querySelector(".biomarker-label")?.textContent?.toLowerCase() || "";
-        document.querySelectorAll<HTMLElement>(".findings-list li").forEach(finding => {
-          const findingText = finding.textContent?.toLowerCase() || "";
-          if ((label.includes("fat") && findingText.includes("rml")) ||
-              (label.includes("t₂") && findingText.includes("rul"))) {
-            finding.style.background = "rgba(0, 150, 255, 0.1)";
-            finding.style.borderColor = "#0096ff";
-          }
-        });
-      });
-      card.addEventListener("mouseleave", function () {
-        document.querySelectorAll<HTMLElement>(".findings-list li").forEach(finding => {
-          finding.style.background = "#1a1d29";
-          finding.style.borderColor = "#3a3f52";
-        });
-      });
-    });
-
-    // === Add Finding ===
-    const addBtn = document.querySelector<HTMLButtonElement>(".add-nodule-btn");
-    addBtn?.addEventListener("click", function () {
-      const findingsList = document.querySelector(".findings-list");
-      if (!findingsList) return;
-      const newFinding = document.createElement("li");
-      const nextId = findingsList.children.length + 1;
-      newFinding.innerHTML = `
-        <span><span className="finding-id">#NEW ${nextId}</span></span>
-        <span className="brock-score">Brock score: 1.8</span>
-      `;
-      findingsList.appendChild(newFinding);
-      const findingsCount = document.querySelector(".result-row .result-value");
-      if (findingsCount && findingsCount.textContent !== "Positive") {
-        findingsCount.textContent = String(parseInt(findingsCount.textContent || "0") + 1);
-      }
-    });
-
     // === Timestamp update ===
     function updateTimestamp() {
       const now = new Date();
@@ -161,6 +179,7 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
     const timer = setInterval(updateTimestamp, 60000);
 
     // === Shortcuts ===
+    const addBtn = document.querySelector<HTMLButtonElement>("#add-btn");
     document.addEventListener("keydown", function (e) {
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "n") {
@@ -220,21 +239,47 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
     marginBottom: "10px",
   };
 
-  const [activeTimelineIndex, setActiveTimelineIndex] = useState(3);
-
-  const progressionData = [
-    { value: "15%", label: "Fat Fraction", severity: "normal" },
-    { value: "22%", label: "Fat Fraction", severity: "mild" },
-    { value: "31%", label: "Fat Fraction", severity: "moderate" },
-    { value: "42%", label: "Current", severity: "severe" },
-    { value: "55%", label: "Predicted", severity: "severe" },
-  ];
-
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const [showCanvas, setShowCanvas] = useState(false);
   const [imgDims, setImgDims] = useState<{ width: number; height: number } | null>(null);
 
   const diagnosisType = uploadInfo?.image_type?.toUpperCase();
+
+  const [activeTimelineIndex, setActiveTimelineIndex] = useState(3);
+
+  // Dynamic progression data based on diagnosis type
+  const progressionData = diagnosisType === "DMD" 
+    ? [
+        { value: "15%", label: "Fat Fraction", severity: "normal" },
+        { value: "22%", label: "Fat Fraction", severity: "mild" },
+        { value: "31%", label: "Fat Fraction", severity: "moderate" },
+        { value: "42%", label: "Current", severity: "severe" },
+        { value: "55%", label: "Predicted", severity: "severe" },
+      ]
+    : diagnosisType === "FILLER"
+    ? [ // FILLER type - filler distribution
+        { value: "5%", label: "Filler Volume", severity: "normal" },
+        { value: "12%", label: "Filler Volume", severity: "mild" },
+        { value: "20%", label: "Filler Volume", severity: "moderate" },
+        { value: "28%", label: "Current", severity: "severe" },
+        { value: "35%", label: "Predicted", severity: "severe" },
+      ]
+    : [ // MS type - lesion percentage
+        { value: "8%", label: "Lesion Percentage", severity: "normal" },
+        { value: "15%", label: "Lesion Percentage", severity: "mild" },
+        { value: "24%", label: "Lesion Percentage", severity: "moderate" },
+        { value: "35%", label: "Current", severity: "severe" },
+        { value: "42%", label: "Predicted", severity: "severe" },
+      ];
+  
+  // Debug logging for diagnosis type
+  useEffect(() => {
+    console.log('🏥 Current uploadInfo:', uploadInfo);
+    console.log('🏥 uploadInfo?.image_type:', uploadInfo?.image_type);
+    console.log('🏥 Diagnosis type (after toUpperCase):', diagnosisType);
+    console.log('🏥 Will display:', diagnosisType === "DMD" ? "DMD Monitor" : diagnosisType === "MS" ? "MS Monitor" : diagnosisType === "FILLER" ? "Filler Localisation Monitor" : "MS Monitor (default)");
+    console.log('📊 Progression data:', progressionData);
+  }, [uploadInfo, diagnosisType, progressionData]);
 
   return (
     <ProtectedRoute>
@@ -247,14 +292,18 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
               ? "DMD Monitor"
               : diagnosisType === "MS"
                 ? "MS Monitor"
-                : "MS Monitor"}
+                : diagnosisType === "FILLER"
+                  ? "Filler Localisation Monitor"
+                  : "MS Monitor"}
           </h1>
           <div className="subtitle">
             {diagnosisType === "DMD"
               ? "AI-Powered MRI Analysis for Duchenne Muscular Dystrophy"
               : diagnosisType === "MS"
                 ? "AI-Powered MRI Analysis for Brain Tumor Detection"
-                : "AI-Powered MRI Analysis"}
+                : diagnosisType === "FILLER"
+                  ? "AI-Powered Imaging Analysis for Dermal Filler Detection"
+                  : "AI-Powered MRI Analysis"}
           </div>
 
           {/* unhide buutton */}
@@ -287,19 +336,19 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
               <div className="patient-info-grid">
                 <div className="patient-info-card">
                   <div className="label">Patient ID</div>
-                  <div className="value">{diagnosisType === "DMD" ? "DMD-2024-0847" : diagnosisType === "MS" ? "MS-2024-0847" : "Unknown"}</div>
+                  <div className="value">{diagnosisType === "DMD" ? "DMD-2024-0847" : diagnosisType === "MS" ? "MS-2024-0847" : diagnosisType === "FILLER" ? "FL-2024-0847" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Age / Sex</div>
-                  <div className="value">{diagnosisType === "DMD" ? "12Y / M" : diagnosisType === "MS" ? "32Y / F" : "Unknown"}</div>
+                  <div className="value">{diagnosisType === "DMD" ? "12Y / M" : diagnosisType === "MS" ? "32Y / F" : diagnosisType === "FILLER" ? "35Y / F" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Ambulatory Status</div>
-                  <div className="value">{diagnosisType === "DMD" ? "Late Ambulatory" : diagnosisType === "MS" ? "Ambulatory" : "Unknown"}</div>
+                  <div className="value">{diagnosisType === "DMD" ? "Late Ambulatory" : diagnosisType === "MS" ? "Ambulatory" : diagnosisType === "FILLER" ? "Ambulatory" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Steroid</div>
-                  <div className="value">{diagnosisType === "DMD" ? "Deflazacort" : diagnosisType === "MS" ? "None" : "Unknown"}</div>
+                  <div className="value">{diagnosisType === "DMD" ? "Deflazacort" : diagnosisType === "MS" ? "None" : diagnosisType === "FILLER" ? "None" : "Unknown"}</div>
                 </div>
                 <div className="patient-info-card">
                   <div className="label">Last Scan</div>
@@ -317,49 +366,135 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                     <div className="value">3.5</div>
                   </div>
                 )}
+                {diagnosisType === "FILLER" && (
+                  <div className="patient-info-card">
+                    <div className="label">Aesthetic Rating</div>
+                    <div className="value">8.2/10</div>
+                  </div>
+                )}
               </div>
 
               <div className="biomarkers-grid">
                 {diagnosisType === "DMD" && (
-                  <div className="biomarker-card">
-                    <div className="biomarker-value value-moderate">42%</div>
-                    <div className="biomarker-label">Lesion %</div>
-                    <div className="biomarker-status status-moderate">Moderate</div>
-                  </div>
+                  <>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate" style={{ color: "#ff9800" }}>42%</div>
+                      <div className="biomarker-label">Fat Fraction</div>
+                      <div className="biomarker-status status-moderate">Moderate</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-severe">58ms</div>
+                      <div className="biomarker-label">T₂ Relaxation</div>
+                      <div className="biomarker-status status-severe">Elevated</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">347cm²</div>
+                      <div className="biomarker-label">Muscle Volume</div>
+                      <div className="biomarker-status status-mild">Reduced</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">3.2</div>
+                      <div className="biomarker-label">Edema Score</div>
+                      <div className="biomarker-status status-mild">Mild</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-normal">8%</div>
+                      <div className="biomarker-label">Asymmetry Index</div>
+                      <div className="biomarker-status status-normal">Normal</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate">15.2cm³</div>
+                      <div className="biomarker-label">Fat Volume</div>
+                      <div className="biomarker-status status-moderate">Elevated</div>
+                    </div>
+                  </>
                 )}
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-severe">58ms</div>
-                  <div className="biomarker-label">T₂ Relaxation</div>
-                  <div className="biomarker-status status-severe">Elevated</div>
-                </div>
-                {diagnosisType === "DMD" && (
-                  <div className="biomarker-card">
-                    <div className="biomarker-value value-mild">347cm²</div>
-                    <div className="biomarker-label">Muscle Volume</div>
-                    <div className="biomarker-status status-mild">Reduced</div>
-                  </div>
+                {diagnosisType === "MS" && (
+                  <>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate">35%</div>
+                      <div className="biomarker-label">Lesion Percentage</div>
+                      <div className="biomarker-status status-moderate">Moderate</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-severe">45ms</div>
+                      <div className="biomarker-label">T₂ Relaxation</div>
+                      <div className="biomarker-status status-severe">Elevated</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">124cm³</div>
+                      <div className="biomarker-label">Lesion Volume</div>
+                      <div className="biomarker-status status-mild">Increased</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">2.8</div>
+                      <div className="biomarker-label">Contrast Enhancement</div>
+                      <div className="biomarker-status status-mild">Mild</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-normal">12</div>
+                      <div className="biomarker-label">Lesion Count</div>
+                      <div className="biomarker-status status-normal">Multiple</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate">0.08%</div>
+                      <div className="biomarker-label">Brain Atrophy</div>
+                      <div className="biomarker-status status-moderate">Mild</div>
+                    </div>
+                  </>
                 )}
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-mild">3.2</div>
-                  <div className="biomarker-label">Edema Score</div>
-                  <div className="biomarker-status status-mild">Mild</div>
-                </div>
-                {diagnosisType === "DMD" && (
-                  <div className="biomarker-card">
-                    <div className="biomarker-value value-normal">8%</div>
-                    <div className="biomarker-label">Asymmetry Index</div>
-                    <div className="biomarker-status status-normal">Normal</div>
-                  </div>
+                {diagnosisType === "FILLER" && (
+                  <>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate">2.4ml</div>
+                      <div className="biomarker-label">Filler Volume</div>
+                      <div className="biomarker-status status-moderate">Detected</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">85%</div>
+                      <div className="biomarker-label">Concentration</div>
+                      <div className="biomarker-status status-mild">High</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-normal">3</div>
+                      <div className="biomarker-label">Injection Sites</div>
+                      <div className="biomarker-status status-normal">Multiple</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-mild">0.8mm</div>
+                      <div className="biomarker-label">Migration Distance</div>
+                      <div className="biomarker-status status-mild">Minimal</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-normal">92%</div>
+                      <div className="biomarker-label">Tissue Integration</div>
+                      <div className="biomarker-status status-normal">Good</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-normal">1.2</div>
+                      <div className="biomarker-label">Symmetry Index</div>
+                      <div className="biomarker-status status-normal">Balanced</div>
+                    </div>
+                  </>
+                )}
+                {!diagnosisType && (
+                  <>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-moderate">35%</div>
+                      <div className="biomarker-label">Lesion Percentage</div>
+                      <div className="biomarker-status status-moderate">Moderate</div>
+                    </div>
+                    <div className="biomarker-card">
+                      <div className="biomarker-value value-severe">45ms</div>
+                      <div className="biomarker-label">T₂ Relaxation</div>
+                      <div className="biomarker-status status-severe">Elevated</div>
+                    </div>
+                  </>
                 )}
                 <div className="biomarker-card">
                   <div className="biomarker-value value-normal">2,834,259</div>
                   <div className="biomarker-label">Total Voxels</div>
                   <div className="biomarker-status status-normal">Segmentation</div>
-                </div>
-                <div className="biomarker-card">
-                  <div className="biomarker-value value-moderate">0.04%</div>
-                  <div className="biomarker-label">Lesion Volume</div>
-                  <div className="biomarker-status status-moderate">Relative</div>
                 </div>
               </div>
 
@@ -368,7 +503,9 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                   <div className="tab-panel active" id="leg-analysis">
                     <div className="mri-viewer">
                       <div className="mri-header">
-                        <div className="mri-title">Brain Analysis</div>
+                        <div className="mri-title">
+                          {diagnosisType === "DMD" ? "Muscle Analysis" : diagnosisType === "FILLER" ? "Filler Distribution Analysis" : "Brain Analysis"}
+                        </div>
                         <div className="scan-info">Screened by MyoMetrics • 07:12 pm, 05/02/22</div>
                       </div>
                       <div className="mri-display">
@@ -382,8 +519,10 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                 height: "auto",
                                 borderRadius: "8px",
                                 border: "1px solid #3a3f52",
-                                display: showCanvas ? "none" : "block"
+                                display: showCanvas ? "none" : "block",
+                                cursor: "zoom-in"
                               }}
+                              onClick={() => setIsImageZoomed(true)}
                               onLoad={e => {
                                 const img = e.currentTarget;
                                 setImgDims({ width: img.naturalWidth, height: img.naturalHeight });
@@ -403,8 +542,10 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                 height: "auto",
                                 borderRadius: "8px",
                                 border: "1px solid #3a3f52",
-                                display: showCanvas ? "none" : "block"
+                                display: showCanvas ? "none" : "block",
+                                cursor: "zoom-in"
                               }}
+                              onClick={() => setIsImageZoomed(true)}
                             />
                           )}
                         </div>
@@ -577,8 +718,83 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                       )}
                                     </div>
                                   </>
+                                ) : diagnosisType === "FILLER" ? (
+                                  // Filler Injection Sites for FILLER
+                                  <>
+                                    {/* NL - Nasolabial Fold */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'NL' ? null : 'NL')}
+                                      >
+                                        <span>NL - Nasolabial Fold (0.8ml detected)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'NL' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'NL' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Filler Type:</strong> Hyaluronic acid (medium cross-linked)</p>
+                                          <p><strong>Injection Depth:</strong> Mid-to-deep dermal layer</p>
+                                          <p><strong>Volume:</strong> 0.8ml bilateral distribution</p>
+                                          <p><strong>Assessment:</strong> Well-integrated, minimal migration, good aesthetic outcome.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* LC - Lip Contouring */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'LC' ? null : 'LC')}
+                                      >
+                                        <span>LC - Lip Contouring (0.9ml detected)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'LC' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'LC' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Filler Type:</strong> Hyaluronic acid (soft, low cross-linked)</p>
+                                          <p><strong>Injection Depth:</strong> Superficial to mid-dermal</p>
+                                          <p><strong>Volume:</strong> 0.9ml vermillion border enhancement</p>
+                                          <p><strong>Assessment:</strong> Optimal placement, natural appearance maintained.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* MF - Marionette Fold */}
+                                    <div style={lesionItemStyle}>
+                                      <div 
+                                        style={lesionHeaderStyle}
+                                        onClick={() => setExpandedLesion(expandedLesion === 'MF' ? null : 'MF')}
+                                      >
+                                        <span>MF - Marionette Fold (0.7ml detected)</span>
+                                        <span style={{
+                                          fontSize: 12,
+                                          color: "#9aa0a6",
+                                          transform: expandedLesion === 'MF' ? "rotate(90deg)" : "rotate(0deg)",
+                                          transition: "transform 0.2s"
+                                        }}>▶</span>
+                                      </div>
+                                      {expandedLesion === 'MF' && (
+                                        <div style={lesionDescriptionStyle}>
+                                          <p><strong>Filler Type:</strong> Hyaluronic acid (medium viscosity)</p>
+                                          <p><strong>Injection Depth:</strong> Deep dermal to subcutaneous</p>
+                                          <p><strong>Volume:</strong> 0.7ml bilateral correction</p>
+                                          <p><strong>Assessment:</strong> Good volumetric correction, excellent tissue integration.</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
                                 ) : (
-                                  // Brain Lesions for MS
+                                  // Default Brain Lesions for MS or unknown
                                   <>
                                     {/* FL - Frontal Lobe */}
                                     <div style={lesionItemStyle}>
@@ -627,102 +843,6 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                         </div>
                                       )}
                                     </div>
-
-                                    {/* TL - Temporal Lobe */}
-                                    <div style={lesionItemStyle}>
-                                      <div 
-                                        style={lesionHeaderStyle}
-                                        onClick={() => setExpandedLesion(expandedLesion === 'TL' ? null : 'TL')}
-                                      >
-                                        <span>TL - Temporal Lobe</span>
-                                        <span style={{
-                                          fontSize: 12,
-                                          color: "#9aa0a6",
-                                          transform: expandedLesion === 'TL' ? "rotate(90deg)" : "rotate(0deg)",
-                                          transition: "transform 0.2s"
-                                        }}>▶</span>
-                                      </div>
-                                      {expandedLesion === 'TL' && (
-                                        <div style={lesionDescriptionStyle}>
-                                          <p><strong>Function:</strong> Memory, auditory processing, language comprehension</p>
-                                          <p><strong>Normal values:</strong> Normal hippocampal volume, no lesions</p>
-                                          <p><strong>Current reading:</strong> 1 lesion near hippocampus</p>
-                                          <p><strong>Clinical significance:</strong> May affect memory formation and language processing.</p>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* OL - Occipital Lobe */}
-                                    <div style={lesionItemStyle}>
-                                      <div 
-                                        style={lesionHeaderStyle}
-                                        onClick={() => setExpandedLesion(expandedLesion === 'OL' ? null : 'OL')}
-                                      >
-                                        <span>OL - Occipital Lobe</span>
-                                        <span style={{
-                                          fontSize: 12,
-                                          color: "#9aa0a6",
-                                          transform: expandedLesion === 'OL' ? "rotate(90deg)" : "rotate(0deg)",
-                                          transition: "transform 0.2s"
-                                        }}>▶</span>
-                                      </div>
-                                      {expandedLesion === 'OL' && (
-                                        <div style={lesionDescriptionStyle}>
-                                          <p><strong>Function:</strong> Visual processing and interpretation</p>
-                                          <p><strong>Normal values:</strong> Clear visual cortex, no signal abnormalities</p>
-                                          <p><strong>Current reading:</strong> No lesions detected</p>
-                                          <p><strong>Clinical significance:</strong> Visual function preserved.</p>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* BS - Brainstem */}
-                                    <div style={lesionItemStyle}>
-                                      <div 
-                                        style={lesionHeaderStyle}
-                                        onClick={() => setExpandedLesion(expandedLesion === 'BS' ? null : 'BS')}
-                                      >
-                                        <span>BS - Brainstem</span>
-                                        <span style={{
-                                          fontSize: 12,
-                                          color: "#9aa0a6",
-                                          transform: expandedLesion === 'BS' ? "rotate(90deg)" : "rotate(0deg)",
-                                          transition: "transform 0.2s"
-                                        }}>▶</span>
-                                      </div>
-                                      {expandedLesion === 'BS' && (
-                                        <div style={lesionDescriptionStyle}>
-                                          <p><strong>Function:</strong> Vital functions, cranial nerves, consciousness</p>
-                                          <p><strong>Normal values:</strong> Intact structure, no signal changes</p>
-                                          <p><strong>Current reading:</strong> 1 small lesion in pons</p>
-                                          <p><strong>Clinical significance:</strong> Monitor for symptoms affecting balance or cranial nerve function.</p>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* CB - Cerebellum */}
-                                    <div style={lesionItemStyle}>
-                                      <div 
-                                        style={lesionHeaderStyle}
-                                        onClick={() => setExpandedLesion(expandedLesion === 'CB' ? null : 'CB')}
-                                      >
-                                        <span>CB - Cerebellum</span>
-                                        <span style={{
-                                          fontSize: 12,
-                                          color: "#9aa0a6",
-                                          transform: expandedLesion === 'CB' ? "rotate(90deg)" : "rotate(0deg)",
-                                          transition: "transform 0.2s"
-                                        }}>▶</span>
-                                      </div>
-                                      {expandedLesion === 'CB' && (
-                                        <div style={lesionDescriptionStyle}>
-                                          <p><strong>Function:</strong> Motor coordination, balance, fine motor control</p>
-                                          <p><strong>Normal values:</strong> Symmetric appearance, no atrophy</p>
-                                          <p><strong>Current reading:</strong> No lesions, normal morphology</p>
-                                          <p><strong>Clinical significance:</strong> Motor coordination function preserved.</p>
-                                        </div>
-                                      )}
-                                    </div>
                                   </>
                                 )}
                               </div>
@@ -736,7 +856,9 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                               onClick={() => setIsHealthyControlVisible(v => !v)}
                               aria-label={isHealthyControlVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>Lesion %</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>
+                                {diagnosisType === "FILLER" ? "Injection Analysis" : "Lesion %"}
+                              </span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -869,8 +991,10 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                   height: "auto",
                                   borderRadius: "8px",
                                   border: "1px solid #3a3f52",
-                                  display: showCanvas ? "none" : "block"
+                                  display: showCanvas ? "none" : "block",
+                                  cursor: "zoom-in"
                                 }}
+                                onClick={() => setIsImageZoomed(true)}
                                 onError={(e) => {
                                   console.error('Failed to load Dixon image:', dixonImageUrl);
                                   // Fallback to placeholder if image fails to load
@@ -886,8 +1010,10 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                   height: "auto",
                                   borderRadius: "8px",
                                   border: "1px solid #3a3f52",
-                                  display: showCanvas ? "none" : "block"
+                                  display: showCanvas ? "none" : "block",
+                                  cursor: "zoom-in"
                                 }}
+                                onClick={() => setIsImageZoomed(true)}
                               />
                             )}
                           </div>
@@ -1076,22 +1202,86 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
 
               <div className="ai-insights">
                 <h3>🤖 AI Clinical Insights</h3>
-                <div className="insight-item">
-                  <div className="insight-header">Critical Finding</div>
-                  <div className="insight-text">Gastrocnemius muscles show severe fatty infiltration ({'>'}65%) with high T2 values indicating ongoing inflammation. Immediate therapeutic intervention recommended.</div>
-                </div>
-                <div className="insight-item">
-                  <div className="insight-header">Pattern Analysis</div>
-                  <div className="insight-text">Distal-to-proximal progression pattern observed. Tibialis posterior showing relative preservation - potential compensatory mechanism detected.</div>
-                </div>
-                <div className="insight-item">
-                  <div className="insight-header">Comparative Analysis</div>
-                  <div className="insight-text">Patient's progression rate is 1.5x faster than cohort average. Consider escalating treatment protocol or clinical trial enrollment.</div>
-                </div>
-                <div className="insight-item">
-                  <div className="insight-header">Therapeutic Target</div>
-                  <div className="insight-text">Fibularis and soleus muscles in critical transition phase. Targeted physiotherapy and emerging therapies may preserve function.</div>
-                </div>
+                {diagnosisType === "DMD" && (
+                  <>
+                    <div className="insight-item">
+                      <div className="insight-header">Critical Finding</div>
+                      <div className="insight-text">Gastrocnemius muscles show severe fatty infiltration ({'>'}65%) with high T2 values indicating ongoing inflammation. Immediate therapeutic intervention recommended.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Pattern Analysis</div>
+                      <div className="insight-text">Distal-to-proximal progression pattern observed. Tibialis posterior showing relative preservation - potential compensatory mechanism detected.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Comparative Analysis</div>
+                      <div className="insight-text">Patient's progression rate is 1.5x faster than cohort average. Consider escalating treatment protocol or clinical trial enrollment.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Therapeutic Target</div>
+                      <div className="insight-text">Fibularis and soleus muscles in critical transition phase. Targeted physiotherapy and emerging therapies may preserve function.</div>
+                    </div>
+                  </>
+                )}
+                {diagnosisType === "MS" && (
+                  <>
+                    <div className="insight-item">
+                      <div className="insight-header">Critical Finding</div>
+                      <div className="insight-text">Multiple periventricular lesions detected with active enhancement indicating ongoing inflammatory process. Consider immediate treatment modification.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Pattern Analysis</div>
+                      <div className="insight-text">Distribution pattern consistent with demyelinating disease. Corpus callosum involvement suggests advanced progression.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Comparative Analysis</div>
+                      <div className="insight-text">Lesion burden is 2.3x above normal range. Brain atrophy rate accelerating compared to baseline scans.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Treatment Response</div>
+                      <div className="insight-text">Current therapy showing suboptimal response. Consider switching to high-efficacy DMT or combination therapy.</div>
+                    </div>
+                  </>
+                )}
+                {diagnosisType === "FILLER" && (
+                  <>
+                    <div className="insight-item">
+                      <div className="insight-header">Distribution Analysis</div>
+                      <div className="insight-text">Hyaluronic acid filler detected in subcutaneous and deep dermal layers. Distribution pattern consistent with aesthetic enhancement procedures.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Volume Assessment</div>
+                      <div className="insight-text">Total filler volume of 2.4ml detected across 3 injection sites. Bilateral symmetry maintained with minimal migration observed.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Tissue Integration</div>
+                      <div className="insight-text">Excellent tissue integration (92%) with no signs of granulomatous reaction or vascular compromise. Good biocompatibility profile.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Clinical Recommendation</div>
+                      <div className="insight-text">Filler placement shows optimal aesthetic outcome. Monitor for long-term tissue response and plan maintenance schedule accordingly.</div>
+                    </div>
+                  </>
+                )}
+                {!diagnosisType && (
+                  <>
+                    <div className="insight-item">
+                      <div className="insight-header">Critical Finding</div>
+                      <div className="insight-text">Multiple periventricular lesions detected with active enhancement indicating ongoing inflammatory process. Consider immediate treatment modification.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Pattern Analysis</div>
+                      <div className="insight-text">Distribution pattern consistent with demyelinating disease. Corpus callosum involvement suggests advanced progression.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Comparative Analysis</div>
+                      <div className="insight-text">Lesion burden is 2.3x above normal range. Brain atrophy rate accelerating compared to baseline scans.</div>
+                    </div>
+                    <div className="insight-item">
+                      <div className="insight-header">Treatment Response</div>
+                      <div className="insight-text">Current therapy showing suboptimal response. Consider switching to high-efficacy DMT or combination therapy.</div>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -1112,97 +1302,6 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
           )}
 
           <div className="sidebar">
-            <div className="sidebar-section">
-              <div className="sidebar-header">
-                <span className="sidebar-title">Patient</span>
-                <span style={{ color: "#9aa0a6", fontSize: "11px" }}>Age: 12Y</span>
-              </div>
-              <div style={{ color: "#9aa0a6", fontSize: "11px", marginBottom: "15px" }}>
-                Duchenne Muscular Dystrophy • Late Ambulatory
-              </div>
-            </div>
-
-            <div className="study-result">
-              <div className="result-row">
-                <span className="result-label">Study result</span>
-                <span className="result-value result-positive">Positive</span>
-              </div>
-              <div className="result-row">
-                <span className="result-label">Findings</span>
-                <span className="result-value">4</span>
-              </div>
-            </div>
-
-            <button className="add-nodule-btn">+ Add Finding</button>
-
-            <div className="guideline-section">
-              <div style={{ color: "#9aa0a6", fontSize: "11px", marginBottom: "8px" }}>Fleischner Society guideline recommendation</div>
-              <div className="guideline-text">
-                MRI at 6-12 months to confirm persistence, then every 2 yrs until 5 yrs.
-              </div>
-            </div>
-
-            <div className="sidebar-section">
-              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Muscle Analysis</div>
-              <ul className="findings-list">
-                <li>
-                  <span><span className="finding-id">#RML 1</span></span>
-                  <span className="brock-score">Brock score: 4.1</span>
-                </li>
-                <li>
-                  <span><span className="finding-id">#RUL 2</span></span>
-                  <span className="brock-score">Brock score: 4.0</span>
-                </li>
-                <li>
-                  <span><span className="finding-id">#RUL 3</span></span>
-                  <span className="brock-score">Brock score: 2.3</span>
-                </li>
-                <li>
-                  <span><span className="finding-id">#RML 4</span></span>
-                  <span className="brock-score">Brock score: 2.3</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="sidebar-section">
-              <div className="sidebar-title" style={{ marginBottom: "10px" }}>AI Predictions</div>
-              <div className="study-result">
-                <div className="result-row">
-                  <span className="result-label">Ambulation Loss</span>
-                  <span className="result-value" style={{ color: "#ff9800" }}>18 months</span>
-                </div>
-                <div className="result-row">
-                  <span className="result-label">Model Confidence</span>
-                  <span className="result-value">85%</span>
-                </div>
-                <div className="result-row">
-                  <span className="result-label">6MO Fat Increase</span>
-                  <span className="result-value" style={{ color: "#ff9800" }}>+15%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="sidebar-section">
-              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Other Findings</div>
-              <div style={{ color: "#9aa0a6", fontSize: "11px", lineHeight: 1.4 }}>
-                Bilateral symmetric muscle involvement with distal-to-proximal progression pattern. Preserved diaphragmatic function noted.
-              </div>
-            </div>
-
-            <div className="sidebar-section">
-              <div className="sidebar-title" style={{ marginBottom: "10px" }}>Recommendations</div>
-              <div style={{ background: "#1a1d29", border: "1px solid #3f3f52", borderRadius: "6px", padding: "10px" }}>
-                <div style={{ color: "#ff9800", fontSize: "11px", fontWeight: 600, marginBottom: "6px" }}>Priority Actions</div>
-                <div style={{ color: "#e8eaed", fontSize: "11px", lineHeight: 1.4, marginBottom: "8px" }}>
-                  • Increase monitoring frequency to 3 months<br />
-                  • Consider therapeutic intervention for VL/RF<br />
-                  • Evaluate for clinical trial eligibility
-                </div>
-                <div style={{ color: "#9aa0a6", fontSize: "10px" }}>
-                  Next scan recommended: 08/15/2024
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

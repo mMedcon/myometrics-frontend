@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { microserviceAPI, UploadResponse, BatchUploadResponse, BatchStatusResponse } from '@/lib/api/microservice';
 import { imageCache } from '@/lib/cache/imageCache';
+import { useSession } from 'next-auth/react';
 
 interface UploadProgress {
   percentage: number;
@@ -11,13 +12,14 @@ interface UploadProgress {
 }
 
 interface UploadWorkflowProps {
-  detectionType: 'dmd' | 'tumor';
-  imageType: "MS" | "DMD" | "";
+  detectionType: 'dmd' | 'tumor' | 'filler';
+  imageType: "MS" | "DMD" | "FILLER" | "";
   onUploadComplete?: (result: UploadResponse | BatchUploadResponse) => void;
   onUploadAttempt?: () => void;
 }
 
 export default function UploadWorkflow({ detectionType, imageType, onUploadComplete, onUploadAttempt }: UploadWorkflowProps) {
+  const { data: session } = useSession();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -354,6 +356,9 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
       return;
     }
 
+    console.log('🚀 Starting upload with imageType:', imageType);
+    console.log('🚀 Detection type:', detectionType);
+
     // Call validation from parent component
     if (onUploadAttempt) {
       onUploadAttempt();
@@ -379,16 +384,47 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
         
       } else {
         // Single file upload
+        console.log('📤 Uploading single file with imageType:', imageType);
         const result = await microserviceAPI.uploadFile(
           selectedFiles[0],
           (progress) => setUploadProgress({ percentage: progress, stage: 'uploading' }),
           imageType // <-- now this is from props
         );
+        console.log('✅ Upload successful:', result);
 
         // Cache the uploaded image for later use
         try {
           await imageCache.cacheImage(result.upload_id, selectedFiles[0]);
-          console.log('Image cached successfully for upload:', result.upload_id);
+          console.log('📄 Image cached successfully for upload:', result.upload_id);
+          
+          // Also store the imageType in localStorage for development
+          const uploadMetadata = {
+            upload_id: result.upload_id,
+            image_type: imageType,
+            filename: selectedFiles[0].name,
+            timestamp: new Date().toISOString(),
+            diagnosis: result.diagnosis,
+            confidence: result.confidence,
+            status: 'completed'
+          };
+          localStorage.setItem(`upload_${result.upload_id}`, JSON.stringify(uploadMetadata));
+          console.log('💾 Upload metadata saved:', uploadMetadata);
+          
+          // Also add to mock uploads list for history page
+          const mockUpload = {
+            upload_id: result.upload_id,
+            filename: selectedFiles[0].name,
+            status: 'completed' as const,
+            upload_timestamp: new Date().toISOString(),
+            diagnosis: result.diagnosis,
+            confidence: result.confidence,
+          };
+          
+          // Get existing uploads from localStorage
+          const existingUploads = JSON.parse(localStorage.getItem('dev_uploads') || '[]');
+          existingUploads.unshift(mockUpload); // Add to beginning
+          localStorage.setItem('dev_uploads', JSON.stringify(existingUploads.slice(0, 20))); // Keep only last 20
+          console.log('📋 Added to upload history:', mockUpload);
         } catch (cacheError) {
           console.warn('Failed to cache image:', cacheError);
           // Don't fail the upload if caching fails
@@ -397,11 +433,30 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
         setUploadResult(result);
         setUploadProgress({ percentage: 100, stage: 'analyzing' });
         
-        // Get current user for save operation
-        const user = localStorage.getItem('user');
-        if (user) {
-          const userData = JSON.parse(user);
-          await microserviceAPI.saveUpload(userData.id.toString(), result.upload_id);
+        // Get current user for save operation - prefer NextAuth session
+        let userId = '';
+        if (session?.user?.email) {
+          console.log('🔍 Using NextAuth session for save operation:', session.user.email);
+          userId = session.user.email;
+        } else {
+          // Fallback to localStorage for backward compatibility
+          const user = localStorage.getItem('user');
+          if (user) {
+            const userData = JSON.parse(user);
+            userId = userData.id.toString();
+            console.log('🔍 Using localStorage user for save operation:', userId);
+          } else {
+            console.warn('⚠️ No user found for save operation');
+          }
+        }
+        
+        if (userId) {
+          try {
+            await microserviceAPI.saveUpload(userId, result.upload_id);
+            console.log('✅ Upload saved successfully for user:', userId);
+          } catch (error) {
+            console.error('❌ Failed to save upload:', error);
+          }
         }
 
         setUploadProgress({ percentage: 100, stage: 'complete' });

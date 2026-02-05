@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { microserviceAPI, UserUpload } from '@/lib/api';
 import Navigation from '@/components/Navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface FilterOptions {
   status: string;
@@ -24,22 +25,47 @@ export default function UploadHistoryPage() {
     sortBy: 'date',
     sortOrder: 'desc',
   });
+  const { data: session, status: sessionStatus } = useSession();
 
   const itemsPerPage = 20;
 
   useEffect(() => {
-    fetchUploads(1, true);
-  }, [filters]);
+    if (sessionStatus === 'authenticated') {
+      fetchUploads(1, true);
+    }
+  }, [filters, sessionStatus]);
 
   const fetchUploads = async (page = 1, reset = false) => {
     try {
       setIsLoading(true);
-      const user = localStorage.getItem('user');
-      if (!user) {
-        setError('User not authenticated');
+      
+      // Check NextAuth session first
+      if (session?.user?.email) {
+        console.log('🔍 Using NextAuth session for user:', session.user.email);
+        // Use email as user ID for NextAuth users
+        const response = await microserviceAPI.getUserUploads(session.user.email);
+        
+        if (reset) {
+          setUploads(response.uploads);
+          setCurrentPage(1);
+        } else {
+          setUploads(prev => [...prev, ...response.uploads]);
+        }
+        
+        setHasMore(response.uploads.length === itemsPerPage);
+        setError(''); // Clear any previous errors
         return;
       }
       
+      // Fallback to localStorage for backward compatibility
+      const user = localStorage.getItem('user');
+      if (!user) {
+        console.log('❌ No user found in NextAuth session or localStorage');
+        setError('User not authenticated. Please sign in to view upload history.');
+        return;
+      }
+      
+      console.log('🔍 Using localStorage user data');
       const userData = JSON.parse(user);
       const response = await microserviceAPI.getUserUploads(userData.id.toString());
       

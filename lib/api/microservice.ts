@@ -24,37 +24,47 @@ const mockStats: Stats = {
 const mockUploads: UserUpload[] = [
   {
     upload_id: 'upload_001',
-    filename: 'cardiac_scan_001.jpg',
+    filename: 'brain_scan_001.jpg',
     status: 'completed',
     upload_timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    diagnosis: 'Normal',
+    diagnosis: 'Tumor Detected',
     confidence: 94.2,
   },
   {
     upload_id: 'upload_002',
-    filename: 'cardiac_scan_002.jpg',
+    filename: 'muscle_scan_002.jpg',
     status: 'completed',
     upload_timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    diagnosis: 'Myocardial Infarction',
+    diagnosis: 'DMD Detected',
     confidence: 87.6,
   },
   {
     upload_id: 'upload_003',
-    filename: 'cardiac_scan_003.jpg',
-    status: 'processing',
+    filename: 'filler_scan_003.jpg',
+    status: 'completed',
     upload_timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    diagnosis: 'Filler Detected',
+    confidence: 91.3,
   },
   {
     upload_id: 'upload_004',
-    filename: 'cardiac_scan_004.jpg',
+    filename: 'brain_scan_004.jpg',
     status: 'completed',
-    upload_timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    diagnosis: 'Arrhythmia',
-    confidence: 76.4,
+    upload_timestamp: new Date(Date.now() - 15 * 60 * 60 * 1000).toISOString(),
+    diagnosis: 'Tumor Not Detected',
+    confidence: 88.7,
   },
   {
     upload_id: 'upload_005',
-    filename: 'cardiac_scan_005.jpg',
+    filename: 'filler_scan_005.jpg',
+    status: 'completed',
+    upload_timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    diagnosis: 'No Filler Detected',
+    confidence: 76.4,
+  },
+  {
+    upload_id: 'upload_006',
+    filename: 'muscle_scan_006.jpg',
     status: 'failed',
     upload_timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
   },
@@ -262,6 +272,7 @@ class MicroserviceAPI {
 
   async uploadFile(file: File, onProgress?: (progress: number) => void, imageType?: string): Promise<UploadResponse> {
     if (isDevMode) {
+      console.log('🧪 Development mode: simulating upload with imageType:', imageType);
       // Simulate upload progress in development mode
       return new Promise((resolve) => {
         let progress = 0;
@@ -272,12 +283,32 @@ class MicroserviceAPI {
           }
           if (progress >= 100) {
             clearInterval(interval);
-            resolve({
+            
+            // Generate diagnosis based on imageType
+            let diagnosis = 'Normal';
+            let confidence = 85 + Math.random() * 15; // 85-100%
+            
+            if (imageType === 'MS') {
+              // Random MS diagnosis with 50% probability
+              const random = Math.random();
+              diagnosis = random < 0.5 ? 'Tumor Detected' : 'Tumor Not Detected';
+            } else if (imageType === 'DMD') {
+              // Always DMD detected for DMD type
+              diagnosis = 'DMD Detected';
+            } else if (imageType === 'FILLER') {
+              // Random Filler diagnosis with 50% probability
+              const random = Math.random();
+              diagnosis = random < 0.5 ? 'Filler Detected' : 'No Filler Detected';
+            }
+            
+            const mockResult = {
               upload_id: `upload_dev_${Date.now()}`,
               message: 'Development mode upload simulation',
-              diagnosis: 'Normal',
-              confidence: 94.5,
-            });
+              diagnosis: diagnosis,
+              confidence: Math.round(confidence * 10) / 10,
+            };
+            console.log('🧪 Dev mode upload result:', mockResult);
+            resolve(mockResult);
           }
         }, 100);
       });
@@ -318,6 +349,9 @@ class MicroserviceAPI {
       });
 
       xhr.open('POST', `${MICROSERVICE_URL}/upload${imageType ? `?image_type=${encodeURIComponent(imageType)}` : ''}`);
+      
+      console.log('🌐 Sending upload request to:', `${MICROSERVICE_URL}/upload${imageType ? `?image_type=${encodeURIComponent(imageType)}` : ''}`);
+      console.log('🏷️  Image type parameter:', imageType);
       
       // Set headers
       const headers = this.getFileUploadHeaders(file.name);
@@ -392,13 +426,54 @@ class MicroserviceAPI {
 
   async getUserUploads(userId: string, limit = 50, offset = 0): Promise<UserUploadsResponse> {
     if (isDevMode) {
+      console.log('🧪 Getting user uploads in dev mode for user:', userId);
+      
+      // Get uploads from localStorage that were created in this session
+      const localUploads: UserUpload[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('upload_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            if (data.upload_id) {
+              localUploads.push({
+                upload_id: data.upload_id,
+                filename: data.filename,
+                status: data.status || 'completed',
+                upload_timestamp: data.timestamp,
+                diagnosis: data.diagnosis || (() => {
+                  // Generate diagnosis based on image_type
+                  if (data.image_type === 'MS') {
+                    return Math.random() > 0.5 ? 'Tumor Detected' : 'Tumor Not Detected';
+                  } else if (data.image_type === 'DMD') {
+                    return 'DMD Detected';
+                  } else if (data.image_type === 'FILLER') {
+                    return Math.random() > 0.5 ? 'Filler Detected' : 'No Filler Detected';
+                  }
+                  return 'Analysis Complete';
+                })(),
+                confidence: data.confidence || (85 + Math.random() * 15),
+              });
+            }
+          } catch (e) {
+            console.warn('Failed to parse localStorage item:', key);
+          }
+        }
+      }
+      
+      // Combine with mock data and sort by timestamp
+      const allUploads = [...localUploads, ...mockUploads]
+        .sort((a, b) => new Date(b.upload_timestamp).getTime() - new Date(a.upload_timestamp).getTime());
+      
       // Return paginated mock data
       const start = offset;
       const end = start + limit;
+      console.log('📊 Returning uploads:', allUploads.slice(start, end));
+      
       return Promise.resolve({
         user_id: userId,
-        uploads: mockUploads.slice(start, end),
-        count: mockUploads.length,
+        uploads: allUploads.slice(start, end),
+        count: allUploads.length,
       });
     }
 

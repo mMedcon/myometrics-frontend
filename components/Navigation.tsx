@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/lib/context/AuthContext';
+import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from '@/lib/context/ThemeContext';
-import {IconKeys} from "next/dist/lib/metadata/constants";
 import ChatWindow from "@/components/ChatWindow";
 import ImageCacheManager from "@/components/ImageCacheManager";
 import AuthButton from "@/components/AuthButton";
@@ -16,23 +15,22 @@ interface NavigationProps {
 
 export default function Navigation({ children }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { data: session, status } = useSession();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
 
   const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/auth');
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/auth' });
   };
 
   const navigationItems = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/upload', label: 'Upload Image' },
     { href: '/history', label: 'Upload History' },
-    ...(user?.role === 'admin' ? [{ href: '/analytics', label: 'Analytics' }] : []),
+    { href: '/analytics', label: 'Analytics' },
   ];
 
   return (
@@ -81,12 +79,8 @@ export default function Navigation({ children }: NavigationProps) {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Temporarily disable AuthButton for testing */}
-              {/* <AuthButton /> */}
-              
-              <div className="hidden md:flex items-center space-x-2" style={{ color: 'var(--text)' }}>
-                <span className="text-sm">Welcome, {user?.firstName}</span>
-              </div>
+              {/* Google OAuth authentication */}
+              <AuthButton />
               
               {/* Cache Manager */}
               <div className="relative">
@@ -140,11 +134,19 @@ export default function Navigation({ children }: NavigationProps) {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-background)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)' }}>
-                    <span className="text-white text-sm font-medium">
-                      {user?.firstName?.[0]}{user?.lastName?.[0]}
-                    </span>
-                  </div>
+                  {session?.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="User Avatar"
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)' }}>
+                      <span className="text-white text-sm font-medium">
+                        {session?.user?.name?.[0] || session?.user?.email?.[0] || 'U'}
+                      </span>
+                    </div>
+                  )}
                   <span className="hidden md:block">▼</span>
                 </button>
 
