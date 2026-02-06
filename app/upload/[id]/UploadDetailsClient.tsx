@@ -422,8 +422,8 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                       <div className="biomarker-status status-severe">Elevated</div>
                     </div>
                     <div className="biomarker-card">
-                      <div className="biomarker-value value-mild">124cm³</div>
-                      <div className="biomarker-label">Lesion Volume</div>
+                      <div className="biomarker-value value-mild">18.4cm³</div>
+                      <div className="biomarker-label">Fat Volume</div>
                       <div className="biomarker-status status-mild">Increased</div>
                     </div>
                     <div className="biomarker-card">
