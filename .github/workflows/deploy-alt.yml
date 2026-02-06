@@ -1,0 +1,56 @@
+name: Deploy to Vercel (Alternative)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_API_URL: https://myometrics-backend.onrender.com
+          NEXT_PUBLIC_MICROSERVICE_URL: https://myometrics-backend.onrender.com
+          NEXT_PUBLIC_DICOM_SERVICE_URL: https://dicom-ar4z.onrender.com
+          NEXT_PUBLIC_DEV_MODE: false
+
+      # Альтернативный способ деплоя через Vercel CLI
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
+
+      - name: Deploy Project Artifacts to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
+
+      - name: Deploy Failed - Missing Secrets
+        if: ${{ secrets.VERCEL_TOKEN == '' }}
+        run: |
+          echo "❌ Deployment failed: VERCEL_TOKEN secret not found"
+          echo "📝 Please add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID to GitHub secrets"
+          echo "📖 See VERCEL_SETUP.md for detailed instructions"
+          exit 1
