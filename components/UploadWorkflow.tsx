@@ -407,8 +407,17 @@ export default function UploadWorkflow({ detectionType, imageType, onUploadCompl
             confidence: result.confidence,
             status: 'completed'
           };
+          
+          console.log('💾 About to save upload metadata with key:', `upload_${result.upload_id}`);
+          console.log('💾 Metadata being saved:', uploadMetadata);
+          console.log('🏷️  Saving image_type as:', imageType);
+          
           localStorage.setItem(`upload_${result.upload_id}`, JSON.stringify(uploadMetadata));
-          console.log('💾 Upload metadata saved:', uploadMetadata);
+          console.log('✅ Upload metadata saved successfully');
+          
+          // Verify it was saved
+          const savedData = localStorage.getItem(`upload_${result.upload_id}`);
+          console.log('🔍 Verification - saved data:', savedData ? JSON.parse(savedData) : 'NOT FOUND');
           
           // Also add to mock uploads list for history page
           const mockUpload = {

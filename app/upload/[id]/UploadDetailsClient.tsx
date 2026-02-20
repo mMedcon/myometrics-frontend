@@ -72,9 +72,12 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
           
           // Fallback to localStorage for development/testing
           const localData = localStorage.getItem(`upload_${uploadId}`);
+          console.log('🔍 Searching localStorage for key:', `upload_${uploadId}`);
+          console.log('🔍 Found localStorage data:', localData);
           if (localData) {
             const parsedData = JSON.parse(localData);
             console.log('💾 Using localStorage data:', parsedData);
+            console.log('🏷️  Image type from localStorage:', parsedData.image_type);
             setUploadInfo(parsedData);
           } else {
             console.error('❌ No data found in localStorage either');
@@ -277,6 +280,15 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
     console.log('🏥 Current uploadInfo:', uploadInfo);
     console.log('🏥 uploadInfo?.image_type:', uploadInfo?.image_type);
     console.log('🏥 Diagnosis type (after toUpperCase):', diagnosisType);
+    console.log('🏥 Upload ID:', uploadId);
+    
+    // Also log what's in localStorage for this upload
+    const localData = localStorage.getItem(`upload_${uploadId}`);
+    if (localData) {
+      console.log('💾 LocalStorage data for this upload:', JSON.parse(localData));
+    } else {
+      console.log('💾 No localStorage data found for upload:', uploadId);
+    }
     console.log('🏥 Will display:', diagnosisType === "DMD" ? "DMD Monitor" : diagnosisType === "MS" ? "MS Monitor" : diagnosisType === "FILLER" ? "Filler Localisation Monitor" : "MS Monitor (default)");
     console.log('📊 Progression data:', progressionData);
   }, [uploadInfo, diagnosisType, progressionData]);
@@ -870,9 +882,9 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                             {isHealthyControlVisible && (
                               <div>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px", gap: "8px", padding: "6px 0", borderBottom: "1px solid #3f3f52", fontSize: "10px", color: "#9aa0a6", fontWeight: 600 }}>
-                                  <div>Muscle</div>
-                                  <div style={{ textAlign: "center" }}>Healthy Control</div>
-                                  <div style={{ textAlign: "center" }}>DMD Patient</div>
+                                  <div>{diagnosisType === "DMD" ? "Muscle" : "Lesion %"}</div>
+                                  <div style={{ textAlign: "center" }}>{diagnosisType === "DMD" ? "Fat Percentage" : "Healthy Control"}</div>
+                                  <div style={{ textAlign: "center" }}>{diagnosisType === "DMD" ? "DMD Patient" : "MS Patient"}</div>
                                 </div>
                                 <div className="muscle-data-item">
                                   <div className="muscle-name">Tibialis Anterior</div>
@@ -910,7 +922,7 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                               onClick={() => setIsDmdPatientVisible(v => !v)}
                               aria-label={isDmdPatientVisible ? "Hide" : "Show"}
                             >
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>DMD Patient</span>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>{diagnosisType === "DMD" ? "DMD Patient" : "MS Patient"}</span>
                               <span style={{
                                 fontSize: 18,
                                 color: "#9aa0a6",
@@ -931,7 +943,7 @@ export default function UploadDetailsClient({ uploadId }: UploadDetailsClientPro
                                   color: "#9aa0a6",
                                   fontWeight: 600
                                 }}>
-                                  <div>Muscle</div>
+                                  <div>{diagnosisType === "DMD" ? "Muscle" : "Lesion %"}</div>
                                   <div style={{ textAlign: "center" }}>Healthy Control</div>
                                   <div style={{ textAlign: "center" }}>DMD Patient</div>
                                 </div>
